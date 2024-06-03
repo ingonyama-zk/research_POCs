@@ -10,7 +10,9 @@ else()
 endif ()
 project(example LANGUAGES CUDA CXX)
 
+# can link to another curve/field by changing the following lib and FIELD_ID (recompile ICICLE)
 set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-relaxed-constexpr -DCURVE_ID=BN254")
+
 set(CMAKE_CUDA_FLAGS_RELEASE "")
 set(CMAKE_CUDA_FLAGS_DEBUG "${CMAKE_CUDA_FLAGS_DEBUG} -g -G -O0")
 
@@ -32,5 +34,8 @@ ${CMAKE_SOURCE_DIR}/../../icicle/icicle/build/lib/libgmock.a
 ${CMAKE_SOURCE_DIR}/../../icicle/icicle/build/lib/libgtest_main.a
 ${CMAKE_SOURCE_DIR}/../../icicle/icicle/build/lib/libgtest.a
 )
+
+# can link to another curve/field by changing the following lib and FIELD_ID (recompile ICICLE)
 target_compile_definitions(poly_api_examples PUBLIC FIELD_ID BN254)
+
 set_target_properties(poly_api_examples PROPERTIES CUDA_SEPARABLE_COMPILATION ON)

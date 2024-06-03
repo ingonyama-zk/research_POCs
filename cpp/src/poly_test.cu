@@ -54,8 +54,8 @@ void basic_commit(){
   Polynomial_t::initialize(std::make_unique<CUDAPolynomialFactory<>>());
   
   //goal:
-  //test commitment equality [(f1+f2) + (f1-f2)]_1 = [2 f_1]_1
-  //test commitment equality [(f1+f2) - (f1-f2)]_1 = [2 f_2]_1
+  //test commitment equality [(f1+f2)^2 + (f1-f2)^2 ]_1 = [4 (f1^2+ f_2^2)]_1
+  //test commitment equality [(f1+f2)^2 - (f1-f2)^2 ]_1 = [4 f1 *f_2]_1
 
   auto f1 = randomize_polynomial(N);
   auto f2 = randomize_polynomial(N);
