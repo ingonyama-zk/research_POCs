@@ -88,3 +88,7 @@ go.work.sum
 *.ptx
 *.cubin
 *.fatbin
+.vscode/settings.json
+/cuda_backend/icicle
+*.gz
+
