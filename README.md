@@ -2,6 +2,8 @@
 
 ## C++ API
 
+TOFIX, still in V2
+
 * compile the ICICLE library for a given curve/field 
 ``` 
 git clone https://github.com/ingonyama-zk/icicle.git --branch main -- single-branch
@@ -33,3 +35,20 @@ target_include_directories(<executable_name> PRIVATE
 "/../icicle/icicle/include"
 "${CMAKE_SOURCE_DIR}/include")
 ``` 
+
+## RUST
+
+In V3
+
+* run examples
+
+```
+cargo run --package rust --example hello_poly 
+
+```
+* run test
+
+```
+
+cargo test --package rust --test test_integration --  --show-output
+```
