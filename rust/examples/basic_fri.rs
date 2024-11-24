@@ -95,7 +95,7 @@ p
 
 pub fn fold_poly <P:UnivariatePolynomial>(
     poly: &DensePolynomial,
-    beta: Fr,
+    beta: Fr,// this should be in extension field for FRI security. currently unsupported
 ) -> DensePolynomial {
     let o = poly.odd();
     let e = poly.even();
@@ -156,5 +156,5 @@ pub fn random_commit_test(){
     let  tree = commit_fn::<DensePolynomial>(p1);
     let comm: &[u8] = tree.get_root().unwrap();
     println!("commitment: {:?}",Fr::from_bytes_le(comm));
-    
+
 }
