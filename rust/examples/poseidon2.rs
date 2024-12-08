@@ -1,24 +1,18 @@
-use std::vec;
 
 use icicle_core::{
     hash::{HashConfig, Hasher}, 
     poseidon2::Poseidon2, traits::FieldImpl
 };
-use icicle_babybear::{
-    field::ScalarField as Frbb,
-    };
-use icicle_m31::{
-        field::{ScalarField as Frm31},
-        };
+use icicle_babybear::field::ScalarField as Frbb;
+use icicle_m31::field::ScalarField as Frm31;
 
-use icicle_runtime::memory::{HostOrDeviceSlice, HostSlice};
+use icicle_runtime::memory::HostSlice;
 
 pub fn hash_test<F:FieldImpl>(
     test_vec: Vec<F>,
     config: HashConfig,
     hash: Hasher,
 ) {
-let t = test_vec.len();
 let input_slice = HostSlice::from_slice(&test_vec);
 let out_init:F = F::zero();
 let mut binding = [out_init];
