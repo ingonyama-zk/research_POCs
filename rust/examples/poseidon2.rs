@@ -122,7 +122,7 @@ for (t,digest) in t_vec.iter().zip(expected_digest_m31.iter()){
     println!(" ");
 }
 
-println!("Merkle tree test with poseidon 2");
+println!("\n Merkle tree test with poseidon 2");
 
 
 // for binary tree Poseidon(t1,t2) -> n1 
