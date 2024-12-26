@@ -7,7 +7,7 @@ use icicle_core::{
     field::Field, hash::{HashConfig,Hasher}, 
     merkle::{MerkleProof, MerkleTree, MerkleTreeConfig, PaddingPolicy}, 
     ntt::{get_root_of_unity, initialize_domain, ntt, NTTConfig, NTTInitDomainConfig}, 
-    polynomials::UnivariatePolynomial, traits::{Arithmetic, FieldImpl, GenerateRandom},
+    traits::{Arithmetic, FieldImpl, GenerateRandom},
     vec_ops::{add_scalars, mul_scalars, scalar_mul, slice, sub_scalars, VecOps, VecOpsConfig}
 };
 
@@ -28,18 +28,20 @@ pub struct Friproof<F: FieldImpl> {
 
 }
 
-impl Friproof<Fr> {
+impl <F: FieldImpl> Friproof<F> {
     pub fn verify_path( 
-        query_index_eval : Fr,
+        query_index_eval : F,
         query_proof: MerkleProof,
         cfg: MerkleTreeConfig,
         tree_height: usize,
      )
+     where 
+        F: FieldImpl,
       {
-        let path = query_proof.get_path::<Fr>();
-        let leaf = query_proof.get_leaf::<Fr>().0;
-        let leaf = query_proof.get_leaf::<Fr>().1;
-        let leaf_root = query_proof.get_root::<Fr>();
+        let path = query_proof.get_path::<F>();
+        let leaf = query_proof.get_leaf::<F>().0;
+        let leaf = query_proof.get_leaf::<F>().1;
+        let leaf_root = query_proof.get_root::<F>();
         let hasher = Blake2s::new(4).unwrap(); // Hash input in 6-byte chunks.
         let compress = Blake2s::new(hasher.output_size() * 2).unwrap(); // Compress two child nodes into one.
 
@@ -54,13 +56,14 @@ impl Friproof<Fr> {
 }
 
 struct  Frilayerdata {
-    pub(crate) code_word_list: Vec<DensePolynomial>,
+    ///pub(crate) code_word_list: Vec<DensePolynomial>,
+    pub(crate) code_word_list: Vec<Vec<Fr>>,
     pub(crate) merkle_tree: Vec<MerkleTree>,
 }
 
 struct Frilayer
 {
-    pub(crate) current_code_word: DensePolynomial,
+    pub(crate) current_code_word: Vec<Fr>,
 }
 
 impl Frilayer
@@ -69,15 +72,68 @@ impl Frilayer
     /// F_e= (F(x)+F(-x))/2 , F_o = (F(x) - F(-x))/(2x) Poly API directly gets this result
     /// F' = F_e + beta * F_o is computed in coeff form. 
     /// F' native domain is now L^2
-    fn fold_poly(
-        &mut self,
-        beta: Fr,// this should be in extension field for FRI security. currently unsupported
-    ) -> DensePolynomial {
-        let o = self.current_code_word.odd();
-        let e = self.current_code_word.even();
-        &e + &(&o*&beta)
-    }
+    // fn fold_poly(
+    //     &mut self,
+    //     beta: Fr,// this should be in extension field for FRI security. currently unsupported
+    // ) -> DensePolynomial {
+    //     let o = self.current_code_word.odd();
+    //     let e = self.current_code_word.even();
+    //     &e + &(&o*&beta)
+    // }
 
+    pub fn fold_vec <F:FieldImpl>(
+        &mut self,
+        rou: Fr,
+        alpha: Fr,
+    ) -> Vec<Fr>
+    {
+        let rou_inv = rou.inv();    
+        let len:usize = self.current_code_word.len();
+        let lenu64:u64 = len.try_into().unwrap();
+        let gen = Fr::one();
+        
+        let mut rou_inv_vec: Vec<Fr> = iter::successors(Some(gen), |p| Some(*p * rou_inv))
+            .take(len/2)
+            .collect();
+    
+        let rou_inv_slice =HostSlice::from_mut_slice(&mut rou_inv_vec[..]);
+        let v_slice = HostSlice::from_mut_slice(&mut self.current_code_word[..]);
+       //init arrays
+        let mut v1 = vec![Fr::zero(); len / 2];
+        let mut v2 = vec![Fr::zero(); len / 2];
+        let mut odd = vec![Fr::zero(); len / 2];
+        let mut even = vec![Fr::zero(); len / 2];
+        let mut even1 = vec![Fr::zero(); len / 2];
+        let mut even2 = vec![Fr::zero(); len / 2];
+        let mut res = vec![Fr::zero(); len / 2];
+        let mut resf = vec![Fr::zero(); len / 2];
+        let mut odd_slice = HostSlice::from_mut_slice(&mut odd[..]);
+        let mut even_slice =  HostSlice::from_mut_slice(&mut even[..]);
+        let mut even1_slice =  HostSlice::from_mut_slice(&mut even1[..]);
+        let mut even2_slice =  HostSlice::from_mut_slice(&mut even2[..]);
+        let mut res_slice =  HostSlice::from_mut_slice(&mut res[..]);
+        let mut resf_slice =  HostSlice::from_mut_slice(&mut resf[..]);
+        let v1_slice = HostSlice::from_mut_slice(&mut v1[..]);
+        let v2_slice = HostSlice::from_mut_slice(&mut v2[..]);
+        let cfg = VecOpsConfig::default();
+        //get odd and even slice
+        let _ = slice(v_slice, 0, 1, lenu64, lenu64/2, &cfg, v1_slice);
+        let _ = slice(v_slice, lenu64/2, 1, lenu64, lenu64/2, &cfg, v2_slice);
+        //o=v1(x)+v2(-x)
+        add_scalars(v1_slice, v2_slice,odd_slice, &cfg).unwrap();
+        //e=v1(x)-v2(-x)
+        sub_scalars(v1_slice, v2_slice, even_slice, &cfg).unwrap();
+        //e1= e* w^{-i}
+        mul_scalars(rou_inv_slice, even_slice, even1_slice, &cfg).unwrap();
+        //e2=e* w^{-i}*alpha
+        scalar_mul(HostSlice::from_slice(&mut [alpha]), even1_slice, even2_slice, &cfg).unwrap();
+        //o+e2
+        add_scalars(odd_slice, even2_slice, res_slice, &cfg).unwrap();
+        let two_inv:Field<1, ScalarCfg> = Fr::from_u32(2).inv();
+        scalar_mul(HostSlice::from_mut_slice(&mut [two_inv]), res_slice, resf_slice, &cfg).unwrap();
+        let res: Vec<Fr> = resf_slice.as_slice().to_vec();
+        res
+    }
     fn commit(
         &mut self
     ) -> MerkleTree
@@ -86,7 +142,7 @@ impl Frilayer
         
         let hasher = Blake2s::new(leaf_size).unwrap();
         let compress = Blake2s::new(hasher.output_size()*2).unwrap();
-        let tree_height = self.current_code_word.get_nof_coeffs().ilog2() as usize;
+        let tree_height = self.current_code_word.len().ilog2() as usize;
     
         let layer_hashes: Vec<&Hasher> = std::iter::once(&hasher)
             .chain(std::iter::repeat(&compress).take(tree_height))
@@ -94,22 +150,22 @@ impl Frilayer
         //binary tree
         let config = MerkleTreeConfig::default();
         
-        let poly_slice = self.current_code_word.coeffs_mut_slice();
+        let poly_slice = self.current_code_word.as_mut_slice();
         let merkle_tree = MerkleTree::new(&layer_hashes, leaf_size, 0).unwrap();
         
         let _ = merkle_tree
-            .build(poly_slice,&config);
+            .build(HostSlice::from_slice(poly_slice), &config);
         
         merkle_tree
     }
 
     fn layer_query(
         query_index: u64,
-        mut layer_code_word: DensePolynomial,
+        mut layer_code_word: Vec<Fr>,
         layer_merkle_tree: &MerkleTree,
     ) -> MerkleProof {
             let config = MerkleTreeConfig::default();
-            layer_merkle_tree.get_proof(layer_code_word.coeffs_mut_slice(), query_index, false,&config).unwrap()
+            layer_merkle_tree.get_proof(HostSlice::from_slice(&layer_code_word), query_index, false,&config).unwrap()
     }
 
 }
@@ -140,17 +196,17 @@ if is_cuda_device_available {
     device_gpu = device_cpu.clone();
 }
 
-let size: usize = 1024;
+let size: usize = 16;
 println!("Polynomial log_degree size: {:?}",10);
-let logsize=10;
+let logsize=4;
 println!("max_domain size needed: {:?}", logsize);
 icicle_runtime::set_device(&device_gpu).unwrap();
 init_ntt_domain(1 << logsize);
 
-let poly = generate_random::<DensePolynomial>(size, false);
+let poly_eval:Vec<Fr> = <Fr as FieldImpl>::Config::generate_random(size);
 let mut commits: Vec<Fr>= vec![];
 let mut tree_vec: Vec<MerkleTree> =vec![];
-let mut evaluation_vector: Vec<DensePolynomial> = vec![];
+let mut evaluation_vector: Vec<Vec<Fr>> = vec![];
 let mut query_proof_data: Vec<MerkleProof> =vec![MerkleProof::new().unwrap()];
 let mut query_proof_data_sym: Vec<MerkleProof> =vec![MerkleProof::new().unwrap()];
 let mut query_evals:Vec<Fr> =vec![];
@@ -158,7 +214,7 @@ let mut query_evals_sym:Vec<Fr> =vec![];
 let mut final_polynomial_data: Fr = Fr::zero();
 
 let mut frilayer=Frilayer {
-    current_code_word: poly,
+    current_code_word: poly_eval,
 };
 let mut frilayerdata = Frilayerdata{
     code_word_list:evaluation_vector,
@@ -179,10 +235,10 @@ let mut acc_rou: Fr = Fr::one();
 
 for layers in 0..logsize-1{ 
     //compute commit of current code word
-    if frilayer.current_code_word.get_nof_coeffs() == 1 {
+    if frilayer.current_code_word.len() == 1 {
         //final round is const if not error
         //append final poly to proof
-        friproof.final_poly = frilayer.current_code_word.get_coeff(0);
+        friproof.final_poly = frilayer.current_code_word[0];
         break;
     }
 
@@ -191,7 +247,7 @@ for layers in 0..logsize-1{
     //update domain for each fold
     acc_rou = acc_rou * rou_init;
     frilayerdata.code_word_list.push(frilayer.current_code_word.clone());
-    initialize_domain(acc_rou, &NTTInitDomainConfig::default()).unwrap();
+    // initialize_domain(acc_rou, &NTTInitDomainConfig::default()).unwrap();
    
    //append commit root to proof
     {
@@ -205,31 +261,31 @@ for layers in 0..logsize-1{
     let mut beta = Fr::from_u32(layers.try_into().unwrap());
     
     //folding factor 1/2 f=  f_e + beta* f_o
-    frilayer.current_code_word = Frilayer::fold_poly(&mut frilayer, beta);
-    
+    //frilayer.current_code_word = Frilayer::fold_poly(&mut frilayer, beta);
+    frilayer.current_code_word = Frilayer::fold_vec::<Fr>(&mut frilayer, acc_rou, beta);
 }  
 //calculate index for query
 
 let mut rng = rand::thread_rng();
 //number of times query runs
-let query: Vec<u64> = (0..1) // Specify the number of elements you want (1 here)
-    .map(|_| rng.gen_range(0..=size / 2 - 1) as u64)
+let query: Vec<usize> = (0..1) // Specify the number of elements you want (1 here)
+    .map(|_| rng.gen_range(0..=size / 2 - 1) as usize)
     .collect();
 
 
 println!("len frilayerdata.codewordslist {:?}",frilayerdata.code_word_list.len());
 for query_index in query.iter()  {
         for layers in 0..=logsize-2{
-            let mut layer_size:u64 = (frilayerdata.code_word_list[layers].degree()+1).try_into().unwrap();
+            let mut layer_size = frilayerdata.code_word_list[layers].len();
             let mut index = query_index % layer_size;
             let mut index_sym = (query_index + layer_size / 2) % layer_size;
-            friproof.query_index_eval.push(frilayerdata.code_word_list[layers].get_coeff(index)); 
-            friproof.query_index_eval_sym.push(frilayerdata.code_word_list[layers].get_coeff(index_sym)); 
+            friproof.query_index_eval.push(frilayerdata.code_word_list[layers][index]); 
+            friproof.query_index_eval_sym.push(frilayerdata.code_word_list[layers][index_sym]); 
             friproof.query_proofs.push(
-                Frilayer::layer_query(index,frilayerdata.code_word_list[layers].clone(),  &frilayerdata.merkle_tree[layers])
+                Frilayer::layer_query(index.try_into().unwrap(),frilayerdata.code_word_list[layers].clone(),  &frilayerdata.merkle_tree[layers])
             );
             friproof.query_proofs_sym.push(
-                Frilayer::layer_query(index_sym,frilayerdata.code_word_list[layers].clone(),  &frilayerdata.merkle_tree[layers])
+                Frilayer::layer_query(index_sym.try_into().unwrap(),frilayerdata.code_word_list[layers].clone(),  &frilayerdata.merkle_tree[layers])
             );
         }
 }
@@ -282,42 +338,42 @@ Friproof::verify_path(query_index[0],query_proofs, MerkleTreeConfig::default(), 
 
 
 
-pub fn generate_random<P> (
-    size: usize,
-    from_coeffs:bool
-)-> P
-where 
-    P: UnivariatePolynomial,
-    P::Field: FieldImpl,
-    P::FieldConfig: GenerateRandom<P::Field>,
-{
-println!("Randomizing polynomial of size {} (from_coeffs: {})", size, from_coeffs);
-let coeffs_or_evals = P::FieldConfig::generate_random(size);
-let p = if from_coeffs {
-    P::from_coeffs(HostSlice::from_slice(&coeffs_or_evals), size)
-} else {
-    P::from_rou_evals(HostSlice::from_slice(&coeffs_or_evals), size)
-};
-p
-}
+// pub fn generate_random<P> (
+//     size: usize,
+//     from_coeffs:bool
+// )-> P
+// where 
+//     P: UnivariatePolynomial,
+//     P::Field: FieldImpl,
+//     P::FieldConfig: GenerateRandom<P::Field>,
+// {
+// println!("Randomizing polynomial of size {} (from_coeffs: {})", size, from_coeffs);
+// let coeffs_or_evals = P::FieldConfig::generate_random(size);
+// let p = if from_coeffs {
+//     P::from_coeffs(HostSlice::from_slice(&coeffs_or_evals), size)
+// } else {
+//     P::from_rou_evals(HostSlice::from_slice(&coeffs_or_evals), size)
+// };
+// p
+// }
 
 
-pub fn fold_poly <P:UnivariatePolynomial>(
-    poly: &DensePolynomial,
-    beta: Fr,// this should be in extension field for FRI security. currently unsupported
-) -> DensePolynomial {
-    let o = poly.odd();
-    let e = poly.even();
-    &e + &(&o*&beta)
-}
+// pub fn fold_poly <P:UnivariatePolynomial>(
+//     poly: &DensePolynomial,
+//     beta: Fr,// this should be in extension field for FRI security. currently unsupported
+// ) -> DensePolynomial {
+//     let o = poly.odd();
+//     let e = poly.even();
+//     &e + &(&o*&beta)
+// }
 
-pub fn check_Schwarz_Zippel <P:UnivariatePolynomial> (
-    p1: &DensePolynomial,
-    p2: &DensePolynomial,
-) {
-    let r = Fr::from_u32(random::<u32>());
-    assert_eq!(p1.eval(&r),p2.eval(&r))
-}
+// pub fn check_Schwarz_Zippel <P:UnivariatePolynomial> (
+//     p1: &DensePolynomial,
+//     p2: &DensePolynomial,
+// ) {
+//     let r = Fr::from_u32(random::<u32>());
+//     assert_eq!(p1.eval(&r),p2.eval(&r))
+// }
 
 pub fn fold_vec <F:FieldImpl>(
     mut v: Vec<Fr>,
@@ -373,29 +429,29 @@ pub fn fold_vec <F:FieldImpl>(
     res
 }
 
-pub fn commit <P:UnivariatePolynomial>(
-    mut poly: DensePolynomial,
-) -> MerkleTree
-{
-    let leaf_size = 4;
+// pub fn commit <P:UnivariatePolynomial>(
+//     mut poly: DensePolynomial,
+// ) -> MerkleTree
+// {
+//     let leaf_size = 4;
     
-    let hasher = Blake2s::new(leaf_size).unwrap();
-    let compress = Blake2s::new(hasher.output_size()*2).unwrap();
-    let tree_height = poly.get_nof_coeffs().ilog2() as usize;
-    println!("tree height {:?}",tree_height);
-    let layer_hashes: Vec<&Hasher> = std::iter::repeat(&compress).take(tree_height)
-        .collect();
-    //binary tree
-    let mut config = MerkleTreeConfig::default();
-    config.padding_policy= PaddingPolicy::ZeroPadding;
-    let poly_slice = poly.coeffs_mut_slice();
-    let merkle_tree = MerkleTree::new(&layer_hashes, leaf_size, 0).unwrap();
+//     let hasher = Blake2s::new(leaf_size).unwrap();
+//     let compress = Blake2s::new(hasher.output_size()*2).unwrap();
+//     let tree_height = poly.get_nof_coeffs().ilog2() as usize;
+//     println!("tree height {:?}",tree_height);
+//     let layer_hashes: Vec<&Hasher> = std::iter::repeat(&compress).take(tree_height)
+//         .collect();
+//     //binary tree
+//     let mut config = MerkleTreeConfig::default();
+//     config.padding_policy= PaddingPolicy::ZeroPadding;
+//     let poly_slice = poly.coeffs_mut_slice();
+//     let merkle_tree = MerkleTree::new(&layer_hashes, leaf_size, 0).unwrap();
     
-    let _ = merkle_tree
-        .build(poly_slice,&config);
+//     let _ = merkle_tree
+//         .build(poly_slice,&config);
     
-    merkle_tree
-}
+//     merkle_tree
+// }
 
 #[test]
 
@@ -470,6 +526,7 @@ pub fn poly_fold_vector_fold_sanity(){
     let p = DensePolynomial::from_rou_evals(HostSlice::from_slice(&v), v.len());
     let gamma = Fr::from_u32(2);
     let p_fold = fold_poly::<DensePolynomial>(&p, gamma);
+    p_fold.print();
     let mut evals = vec![Fr::zero();  size/2];
     let mut eval_slice = HostSlice::from_mut_slice(&mut evals[..]);
     p_fold.eval_on_rou_domain(logsize/2, eval_slice);
