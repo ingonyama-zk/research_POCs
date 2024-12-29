@@ -4,11 +4,7 @@ use icicle_babybear::{
     field::{ExtensionField as Fr4, ScalarCfg, ScalarField as Fr},
     polynomials::DensePolynomial};
 use icicle_core::{
-    field::Field, hash::{HashConfig,Hasher}, 
-    merkle::{MerkleProof, MerkleTree, MerkleTreeConfig, PaddingPolicy}, 
-    ntt::{get_root_of_unity, initialize_domain, ntt, NTTConfig, NTTInitDomainConfig}, 
-    traits::{Arithmetic, FieldImpl, GenerateRandom},
-    vec_ops::{add_scalars, mul_scalars, scalar_mul, slice, sub_scalars, VecOps, VecOpsConfig}
+    field::Field, hash::{HashConfig,Hasher}, merkle::{MerkleProof, MerkleTree, MerkleTreeConfig, PaddingPolicy}, ntt::{get_root_of_unity, initialize_domain, ntt, NTTConfig, NTTInitDomainConfig}, polynomials::UnivariatePolynomial, traits::{Arithmetic, FieldImpl, GenerateRandom}, vec_ops::{add_scalars, mul_scalars, scalar_mul, slice, sub_scalars, VecOps, VecOpsConfig}
 };
 
 use icicle_hash::{blake2s::Blake2s};
@@ -461,7 +457,6 @@ pub fn test_commit_and_fold_coeffs(){
     let v = vec![Fr::from_u32(1),Fr::from_u32(2),Fr::from_u32(3),Fr::from_u32(4)];
     println!("p= 1 + 2 x + 3x^2 + 4 x^3");
     init_ntt_domain(1 << logsize);
-
     let p = DensePolynomial::from_coeffs(HostSlice::from_slice(&v), v.len());
     p.print();
     let tree = commit::<DensePolynomial>(p.clone());
