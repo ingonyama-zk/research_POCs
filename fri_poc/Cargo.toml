@@ -22,6 +22,8 @@ merlin = {version = "3.0.0"}
 #merlin ={ version = "3.0.0", features = ["debug-transcript"]}
 rand = "0.8"
 clap = { version = "<=4.4.12", features = ["derive"] }
+bitvec = "1.0.1"
+rayon = "1.10"
 
 [features]
 # nightly = []

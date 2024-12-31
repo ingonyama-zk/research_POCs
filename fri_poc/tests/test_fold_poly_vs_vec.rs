@@ -20,25 +20,10 @@ use icicle_babybear::{
     polynomials::DensePolynomial, vec_ops};
 
 use fri_poc::data_structures::*;
+use fri_poc::utils::*;
 
-fn generate_random_vector<F:FieldImpl> (size:usize) -> Vec<F> 
-where 
-<F as FieldImpl>::Config: GenerateRandom<F>,
-{
-F::Config::generate_random(size)
-}
 
-fn init_ntt_domain(max_ntt_size: u64) {
-    // Initialize NTT domain for all fields. Polynomial operations rely on NTT.
-    println!(
-        "Initializing NTT domain for max size 2^{}",
-        max_ntt_size.trailing_zeros()
-    );
-    //test will fail when coset gen !=1
-    let rou_baby_bear: Fr = get_root_of_unity::<Fr>(max_ntt_size);
-    //test fails for coset gen!=1 since init domain doesnt accept order of primitive root !=2
-    initialize_domain(rou_baby_bear, &NTTInitDomainConfig::default()).unwrap();
-}
+
 
 fn fold_poly(
     poly: DensePolynomial,
@@ -55,7 +40,7 @@ pub fn poly_fold_vector_fold_sanity_no_coset(){
     let size: usize = 8;
     let logsize=3;
     // this cannot compute cosets
-    init_ntt_domain(1 << logsize);
+    init_ntt_domain::<Fr>(1 << logsize);
     let v = vec![Fr::from_u32(1),Fr::from_u32(2),Fr::from_u32(3),Fr::from_u32(4),Fr::from_u32(5),Fr::from_u32(6),Fr::from_u32(7),Fr::from_u32(8)];
     let poly = DensePolynomial::from_rou_evals(HostSlice::from_slice(&v), v.len());
     let gamma = Fr::from_u32(2);
@@ -90,7 +75,7 @@ pub fn poly_fold_vector_fold_sanity_coset(){
     let size: usize = 8;
     let logsize=3;
     // this cannot compute cosets
-    init_ntt_domain(1 << logsize);
+    init_ntt_domain::<Fr>(1 << logsize);
     //v in native
     let v = vec![Fr::from_u32(1),Fr::from_u32(2),Fr::from_u32(3),Fr::from_u32(4),Fr::from_u32(5),Fr::from_u32(6),Fr::from_u32(7),Fr::from_u32(8)];
     //p in coeff form
@@ -134,14 +119,35 @@ pub fn poly_fold_vector_fold_sanity_coset(){
     println!("p fold evals : coset gen D^2 {:?}",coset_sq_eval_slice.as_slice().to_vec());
 
 }
+#[test]
+pub fn poly_extend_poly(){
 
+    let size: usize = 8;
+    let logsize=3;
+    let new_domainsize = size*2;
+    let new_logsize=new_domainsize.ilog2();
+    // this cannot compute cosets
+    init_ntt_domain::<Fr>(1 << new_logsize);
+    //v in native
+    let mut v:Vec<Fr> = vec![Fr::from_u32(1),Fr::from_u32(2),Fr::from_u32(3),Fr::from_u32(4),Fr::from_u32(5),Fr::from_u32(6),Fr::from_u32(7),Fr::from_u32(8)];
+    let mut vz:Vec<Fr> = vec![Fr::zero(),Fr::zero(),Fr::zero(),Fr::zero(),Fr::zero(),Fr::zero(),Fr::zero(),Fr::zero()];    
+    //p in coeff form
+    v.append(&mut vz);
+    let mut poly = DensePolynomial::from_coeffs(HostSlice::from_slice(&v.clone()), new_domainsize);
+    poly.print();
+    let mut new_domain_evals = vec![Fr::zero();  new_domainsize];
+    let mut new_domain_eval_size = HostSlice::from_mut_slice(&mut new_domain_evals[..]);
+    let mut cfg = NTTConfig::<Fr>::default();
+    ntt(poly.coeffs_mut_slice(), NTTDir::kForward, &cfg, new_domain_eval_size).unwrap();
+    println!("P on big domain {:?} ",new_domain_eval_size.as_slice().to_vec());
+}
 
 #[test]
 pub fn fold_evals_test(){
     let size: usize = 8;
     let logsize=3;
     // this cannot compute cosets
-    init_ntt_domain(1 << logsize);
+    init_ntt_domain::<Fr>(1 << logsize);
     //v in native
     let v = vec![Fr::from_u32(1),Fr::from_u32(2),Fr::from_u32(3),Fr::from_u32(4),Fr::from_u32(5),Fr::from_u32(6),Fr::from_u32(7),Fr::from_u32(8)];
 
@@ -172,8 +178,8 @@ pub fn commit_and_verify(){
         current_code_word: v.clone(),
     };
     let tree: MerkleTree = current.commit();
-    println!("root tree {:?}", tree.get_root::<Fr>().unwrap());
-    let proof = current.test_query(1, &tree);
+    println!("tree.root {:?}", tree.get_root::<Fr>().unwrap());
+    let proof = current.layer_query(1, &tree);
     println!("proof.root {:?}", proof.get_root::<Fr>());
     let (leaf,index)= proof.get_leaf::<Fr>();
     println!("proof.leaf {:?}, proof.index {:?}", leaf,index);

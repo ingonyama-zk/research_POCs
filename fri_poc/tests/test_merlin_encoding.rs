@@ -2,6 +2,7 @@ use std::u64;
 
 #[cfg(test)] 
 use fri_poc::transcript::TranscriptProtocol;
+use fri_poc::utils::{hash_fuse, num_leading_zeros, proof_of_work};
 use icicle_babybear::field::ScalarField as Fr;
 use icicle_runtime::memory::HostSlice;
 use merlin::{Transcript,TranscriptRngBuilder};
@@ -90,7 +91,29 @@ use hex::encode;
     println!("input[15..=16]: {:?}", input[15..=16].to_vec());
     println!("keccak prf:{:?}",encode(buf.clone()));
     println!("challenge prf: {:?}", Fr::from_bytes_le(&buf));
+
+
+
  }   
 
+#[test]
+//Shitty proof of work
+fn test_pow() {
+   
+   let mut new_transcript = Transcript::new(b"test");
+   let public = Fr::from_u32(99).to_bytes_le();
+   TranscriptProtocol::<Fr>::fri_domain_sep(&mut new_transcript, b"friv1", 2u64, public.clone());
+   
+   let t = Fr::from_u32(3);
+   TranscriptProtocol::<Fr>::append_root(&mut new_transcript,b"scalar",&t);
+   let challenge = TranscriptProtocol::<Fr>::challenge_scalar(&mut new_transcript, b"challenge");
+   println!("transcript challenge: {:?}",challenge);
 
-
+   let pow_bits:usize = 24;
+   let nonce = proof_of_work(pow_bits, challenge);
+   println!("nonce {:?} ",nonce );
+   let out: Vec<u8> = hash_fuse(challenge.to_bytes_le(), nonce.to_le_bytes().to_vec());
+   let out_lead_zeros: usize = num_leading_zeros(out);
+   assert_eq!(out_lead_zeros,pow_bits);
+   
+}

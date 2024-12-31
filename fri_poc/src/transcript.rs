@@ -1,15 +1,17 @@
 use std::fmt::Pointer;
-
+use bitvec::prelude::*;
 use merlin::Transcript;
 use icicle_core::{
     field::Field, hash::Hasher, traits::{Arithmetic, FieldConfig, FieldImpl, GenerateRandom}};
 
 pub trait TranscriptProtocol<F:FieldImpl> {
-    fn fri_domain_sep(&mut self, domain_seprator: &'static [u8],init_domain_size: u64, public: Vec<u8>);
+    fn fri_domain_sep(&mut self, domain_seperator: &'static [u8],init_domain_size: u64, public: Vec<u8>);
     /// Append a `scalar` with the given `label`.
     fn append_root(&mut self, label: &'static [u8], scalar: &F);
     /// Compute a `label`ed challenge variable.
     fn challenge_scalar(&mut self, label: &'static [u8]) -> F;
+    // add pow nonce
+    fn add_nonce(&mut self, nonce: u64);
 }
 
 impl<F: FieldImpl> TranscriptProtocol<F> for Transcript {
@@ -28,5 +30,8 @@ impl<F: FieldImpl> TranscriptProtocol<F> for Transcript {
         let mut buf = [0u8; 64];
         self.challenge_bytes(label, &mut buf);
         F::from_bytes_le(&buf)
+    }
+    fn add_nonce(&mut self, nonce: u64) {
+        self.append_u64(b"pow_nonce", nonce);
     }
 }

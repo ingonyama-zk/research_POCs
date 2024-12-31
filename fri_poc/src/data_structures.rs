@@ -1,14 +1,18 @@
 use std::iter;
 
 use icicle_core::
-    {field::Field, hash::{self, HashConfig, Hasher, HasherHandle}, merkle::{MerkleProof,MerkleTree,MerkleTreeConfig,PaddingPolicy}, polynomials::UnivariatePolynomial, traits::{Arithmetic,FieldConfig,FieldImpl,GenerateRandom,MontgomeryConvertible}, vec_ops::*
+    {field::Field, hash::{self, HashConfig, Hasher, HasherHandle}, 
+    merkle::{MerkleProof,MerkleTree,MerkleTreeConfig,PaddingPolicy}, 
+    polynomials::UnivariatePolynomial, 
+    traits::{Arithmetic,FieldConfig,FieldImpl,GenerateRandom,MontgomeryConvertible},
+    vec_ops::*
     };
 use icicle_hash::blake2s::Blake2s;
 use icicle_runtime::memory::HostSlice;
 
 pub struct Friconfig{
-    pub(crate) blow_up_factor: usize,
-    pub (crate) folding_factor: usize,
+    pub(crate) blow_up_factor: usize, // />= 1
+    pub (crate) folding_factor: usize, 
     pub(crate) pow_bits: usize,
     pub(crate) num_queries: usize,
     pub(crate) stopping_degree: usize,
@@ -159,7 +163,7 @@ where
             .build(HostSlice::from_slice(poly_slice), &config).unwrap();
         merkle_tree
     }
-    pub fn test_query(
+    pub fn layer_query(
         &mut self,
         query_index: u64,
         layer_tree: &MerkleTree,

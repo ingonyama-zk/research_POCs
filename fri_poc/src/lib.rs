@@ -2,6 +2,7 @@ pub mod data_structures;
 pub mod transcript;
 pub mod prover;
 pub mod verifier;
+pub mod utils;
 
 // pub fn add(left: u64, right: u64) -> u64 {
 //     left + right
