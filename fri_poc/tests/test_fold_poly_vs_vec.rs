@@ -180,7 +180,7 @@ pub fn commit_and_verify(){
         current_code_word: v.clone(),
     };
     let tree: MerkleTree = current.commit();
-    println!("tree.root {:?}", tree.get_root::<Fr>().unwrap());
+    println!("\n tree.root {:?}", tree.get_root::<Fr>().unwrap());
     let proof = current.layer_query(1, &tree);
     println!("proof.root {:?}", proof.get_root::<Fr>());
     let (leaf,index)= proof.get_leaf::<Fr>();

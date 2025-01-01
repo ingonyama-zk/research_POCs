@@ -103,6 +103,7 @@ F:FieldImpl
 {
     (0u64..u64::MAX) // Create a parallel iterator
         .find(|&nonce| {
+            //goal is to find nonce such that H(challenge||nonce) =digest such that digest has pow_bits leading zeros
             let mut output = hash_fuse(transcript_challenge.to_bytes_le(),  nonce.to_le_bytes().to_vec());
                  // Count leading zeros in the bit representation of the nonce
             let leading_zeros: usize = num_leading_zeros(output);

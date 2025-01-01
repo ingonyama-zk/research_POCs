@@ -28,3 +28,10 @@ rayon = "1.10"
 [features]
 # nightly = []
 # debug-transcript = ["hex"]
+
+[dev-dependencies]
+criterion = "0.5.1"
+
+[[bench]]
+name = "benchmark"
+harness = false

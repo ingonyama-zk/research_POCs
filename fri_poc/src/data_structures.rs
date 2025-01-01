@@ -7,7 +7,7 @@ use icicle_core::
     traits::{Arithmetic,FieldConfig,FieldImpl,GenerateRandom,MontgomeryConvertible},
     vec_ops::*
     };
-use icicle_hash::blake2s::Blake2s;
+use icicle_hash::{blake2s::Blake2s, keccak::Keccak256};
 use icicle_runtime::memory::HostSlice;
 
 pub struct Friconfig{
@@ -145,19 +145,24 @@ where
         &mut self
     ) -> MerkleTree
     { 
-        let leaf_size:u64 = 4;//for 32 bit fields
+        println!("current code word: {:?}",self.current_code_word);
         //to replace this with generics and merkle config
+        let leaf_size:u64 = (F::one()).to_bytes_le().len().try_into().unwrap();//4 for 32 bit fields
+        let no_of_leaves =  self.current_code_word.len();
+        println!("leaf size for baby bear: {:?}",leaf_size);
+        println!("no of leaves: {:?}",no_of_leaves);
         let hasher = Blake2s::new(leaf_size).unwrap();
         let compress = Blake2s::new(hasher.output_size()*2).unwrap();
-        let tree_height = self.current_code_word.len().ilog2() as usize;
+        let tree_height = no_of_leaves.ilog2() as usize;
+        print!("tree height: {:?}",tree_height);
     
         let layer_hashes: Vec<&Hasher> = std::iter::once(&hasher)
             .chain(std::iter::repeat(&compress).take(tree_height))
             .collect();
         //binary tree
-        let config = MerkleTreeConfig::default();
+        let mut config = MerkleTreeConfig::default();
         
-        let poly_slice = self.current_code_word.as_mut_slice();
+        let poly_slice: &mut [F] = self.current_code_word.as_mut_slice();
         let merkle_tree = MerkleTree::new(&layer_hashes, leaf_size, 0).unwrap();
         merkle_tree
             .build(HostSlice::from_slice(poly_slice), &config).unwrap();
