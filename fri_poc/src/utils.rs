@@ -7,13 +7,31 @@ use icicle_core::
     vec_ops::{add_scalars, mul_scalars, scalar_mul, slice, sub_scalars, VecOps, VecOpsConfig},
     ntt::{get_root_of_unity, initialize_domain, ntt, ntt_inplace, NTTConfig, NTTInitDomainConfig,NTTDir, NTTDomain},
     };
-use icicle_runtime::memory::HostSlice;
+use icicle_runtime::{memory::HostSlice,Device};
 use rand::distributions::uniform::UniformSampler;
 
 use crate::data_structures::Friconfig;
 use icicle_hash::blake2s::Blake2s;
 use rayon::prelude::*;
 
+pub fn set_backend_cpu() {
+    
+    // icicle_runtime::load_backend("../Polynomial-API/cuda_backend/icicle/lib/backend").unwrap();
+    let device_cpu = Device::new("CPU", 0);
+    icicle_runtime::set_device(&device_cpu).unwrap();
+}
+
+pub fn try_load_and_set_backend_gpu() {
+    
+    icicle_runtime::load_backend("../Polynomial-API/cuda_backend/icicle/lib/backend").unwrap();
+    let device_gpu = Device::new("CUDA", 0);
+    let is_cuda_device_available = icicle_runtime::is_device_available(&device_gpu);
+    if is_cuda_device_available {
+        icicle_runtime::set_device(&device_gpu).unwrap();
+    } else {
+        set_backend_cpu();
+}
+}
 pub fn generate_random_vector<F:FieldImpl> (size:usize) -> Vec<F> 
     where 
     <F as FieldImpl>::Config: GenerateRandom<F>,

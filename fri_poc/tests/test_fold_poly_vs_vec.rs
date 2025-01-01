@@ -12,7 +12,8 @@ use icicle_core::
     };
 use icicle_hash::blake2s::Blake2s;
 
-use icicle_runtime::memory::HostSlice;
+use icicle_runtime::{memory::HostSlice,Device};
+
 
 
 use icicle_babybear::{
@@ -144,6 +145,7 @@ pub fn poly_extend_poly(){
 
 #[test]
 pub fn fold_evals_test(){
+    try_load_and_set_backend_gpu();
     let size: usize = 8;
     let logsize=3;
     // this cannot compute cosets

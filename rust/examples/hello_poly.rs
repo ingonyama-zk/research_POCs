@@ -25,7 +25,7 @@ fn init_ntt_domain(max_ntt_size: u64) {
 
 fn main(){
 
-    icicle_runtime::load_backend("../cuda_backend").unwrap();
+    icicle_runtime::load_backend("../cuda_backend/icicle/lib/backend").unwrap();
     let _ = icicle_runtime::load_backend_from_env_or_default();
 
 // Check if GPU is available
