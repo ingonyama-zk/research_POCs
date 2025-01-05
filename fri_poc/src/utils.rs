@@ -5,7 +5,7 @@ use icicle_core::
     polynomials::UnivariatePolynomial, 
     traits::{Arithmetic,FieldConfig,FieldImpl,GenerateRandom}, 
     vec_ops::{add_scalars, mul_scalars, scalar_mul, slice, sub_scalars, VecOps, VecOpsConfig},
-    ntt::{get_root_of_unity, initialize_domain, ntt, ntt_inplace, NTTConfig, NTTInitDomainConfig,NTTDir, NTTDomain},
+    ntt::{get_root_of_unity, initialize_domain, ntt, ntt_inplace, NTTConfig, NTTInitDomainConfig,NTTDir, NTTDomain,NTT},
     };
 use icicle_runtime::{memory::HostSlice,Device};
 use rand::distributions::uniform::UniformSampler;
@@ -71,6 +71,35 @@ pub fn init_ntt_domain<F>(max_ntt_size: u64)
         //test fails for coset gen!=1 since init domain doesnt accept order of primitive root !=2
         initialize_domain(rou, &NTTInitDomainConfig::default()).unwrap();
     }
+
+pub fn coeff_to_eval_blowup<F:FieldImpl>(mut input: Vec<F>, size:usize) -> Vec<F> 
+where
+        <F as FieldImpl>::Config: NTTDomain<F> +NTT<F,F>,
+{
+    //zero pad coeffs to dest size
+    let mut vz: Vec<F> = vec![F::zero(); size - input.len()];
+    input.append(&mut vz);
+    let logsize= size.ilog2();
+    init_ntt_domain::<F>(1 << logsize);
+    let ntt_cfg: NTTConfig<F> = NTTConfig::<F>::default();
+    let mut poly_eval = vec![F::zero(); size];
+    ntt(HostSlice::from_slice(&input), NTTDir::kForward, &ntt_cfg, HostSlice::from_mut_slice(&mut poly_eval[..])).unwrap();
+    poly_eval
+}
+
+pub fn eval_to_eval_blowup<F:FieldImpl>(mut input: Vec<F>, size:usize) -> Vec<F> 
+where
+        <F as FieldImpl>::Config: NTTDomain<F> +NTT<F,F>,
+{
+    let logsize= input.len().ilog2();
+    init_ntt_domain::<F>(1 << logsize);
+    let ntt_cfg: NTTConfig<F> = NTTConfig::<F>::default();
+    let mut poly_coeff: Vec<F> = vec![F::zero(); input.len()];
+    ntt(HostSlice::from_slice(&input), NTTDir::kInverse, &ntt_cfg, HostSlice::from_mut_slice(&mut &mut poly_coeff[..])).unwrap();
+    coeff_to_eval_blowup(poly_coeff, size)
+}
+
+
 pub fn num_leading_zeros(bytes: Vec<u8>) -> usize {
     let mut leading_zeros = 0;
     for byte in &bytes {

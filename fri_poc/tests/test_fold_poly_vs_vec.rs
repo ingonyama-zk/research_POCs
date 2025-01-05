@@ -22,6 +22,7 @@ use icicle_babybear::{
 
 use fri_poc::data_structures::*;
 use fri_poc::utils::*;
+use rand::Rng;
 
 
 
@@ -45,7 +46,7 @@ pub fn poly_fold_vector_fold_sanity_no_coset(){
     let v = vec![Fr::from_u32(1),Fr::from_u32(2),Fr::from_u32(3),Fr::from_u32(4),Fr::from_u32(5),Fr::from_u32(6),Fr::from_u32(7),Fr::from_u32(8)];
     let poly = DensePolynomial::from_rou_evals(HostSlice::from_slice(&v), v.len());
     let gamma = Fr::from_u32(2);
-    let mut frilayer =  current_layer::<Fr> {
+    let mut frilayer =  Current_layer::<Fr> {
         current_code_word: v.clone(),
     };
 
@@ -93,7 +94,7 @@ pub fn poly_fold_vector_fold_sanity_coset(){
 
 
     let gamma = Fr::from_u32(2);
-    let mut frilayer = current_layer::<Fr> {
+    let mut frilayer = Current_layer::<Fr> {
         current_code_word: v_eval_coset_vec.clone(),
     };
     //fold coset eval vec.
@@ -141,6 +142,8 @@ pub fn poly_extend_poly(){
     let mut cfg = NTTConfig::<Fr>::default();
     ntt(poly.coeffs_mut_slice(), NTTDir::kForward, &cfg, new_domain_eval_size).unwrap();
     println!("P on big domain {:?} ",new_domain_eval_size.as_slice().to_vec());
+    let v_b =coeff_to_eval_blowup::<Fr>(v, size*2);
+    println!("Vec on big domain  {:?}",v_b);
 }
 
 #[test]
@@ -163,7 +166,7 @@ pub fn fold_evals_test(){
     ntt(v_slice, NTTDir::kForward, &cfg, v_eval_coset).unwrap();
     let v_eval_coset_vec:Vec<Fr>=v_eval_coset.as_slice().to_vec();
 
-    let mut current = current_layer {
+    let mut current = Current_layer {
         current_code_word: v_eval_coset_vec.clone(),
     };
     let gamma = Fr::from_u32(2);
@@ -176,18 +179,28 @@ pub fn fold_evals_test(){
 pub fn commit_and_verify(){
     let v = vec![Fr::from_u32(1),Fr::from_u32(2),Fr::from_u32(3),Fr::from_u32(4),Fr::from_u32(5),Fr::from_u32(6),Fr::from_u32(7),Fr::from_u32(8)];
 //    let v:Vec<Fr> = <Fr as FieldImpl>::Config::generate_random(size)
-    let mut current = current_layer {
+    let mut current = Current_layer {
         current_code_word: v.clone(),
     };
     let tree: MerkleTree = current.commit();
-    println!("\n tree.root {:?}", tree.get_root::<Fr>().unwrap());
     let proof = current.layer_query(1, &tree);
-    println!("proof.root {:?}", proof.get_root::<Fr>());
-    let (leaf,index)= proof.get_leaf::<Fr>();
-    println!("proof.leaf {:?}, proof.index {:?}", leaf,index);
-    let path= proof.get_path::<Fr>();
-    println!("proof.path {:?}",path);
-    let result = tree.verify(&proof).unwrap();
+    let result = current.test_verify_path(proof);
+    assert!(result);
+    drop(tree);
+}
+
+#[test]
+pub fn commit_and_verify_random(){
+    let size:usize = 131072;
+    let test_vec = generate_random_vector::<Fr>(size);
+    let mut current = Current_layer {
+        current_code_word: test_vec.clone(),
+    };
+    let mut rng = rand::thread_rng();
+    let r:u64 = rng.gen_range(0..size).try_into().unwrap();
+    let tree: MerkleTree = current.commit();
+    let proof = current.layer_query(r, &tree);
+    let result = current.test_verify_path(proof);
     assert!(result);
     drop(tree);
 }

@@ -11,75 +11,42 @@ use icicle_hash::{blake2s::Blake2s, keccak::Keccak256};
 use icicle_runtime::memory::HostSlice;
 
 pub struct Friconfig{
-    pub(crate) blow_up_factor: usize, // />= 1
-    pub (crate) folding_factor: usize, 
+    pub(crate) blow_up_factor: usize, 
+    pub(crate) folding_factor: usize, 
     pub(crate) pow_bits: usize,
     pub(crate) num_queries: usize,
-    pub(crate) stopping_degree: usize,
+    pub(crate) stopping_size: usize, //should be power of two
     //pub (crate) Commitment_scheme: Merkle/MMCS,
 }
 
-pub struct commit_config <F:FieldImpl>{
-    pub(crate) hasher: HasherHandle,
-    pub (crate) hasher_DT: F,
-    pub(crate) compression: HasherHandle,
-    pub (crate) compression_DT: F,
-    pub(crate) arity: usize,
-    pub (crate) padding_policy: PaddingPolicy,
-
-}
+//for future
+// pub struct commit_config {
+//     pub hasher: Hasher,
+//     pub hasher_dt: &'static [u8],
+//     pub compression: Hasher,
+//     pub compression_dt: &'static [u8],
+//     pub arity: usize,
+//     pub merkle_conf: MerkleTreeConfig,
+// }
 pub struct Friproof<F:FieldImpl> {
-    pub commit_phase_commits: Vec<F>,
-    pub query_leafs: Vec<Vec<F>>, // [q1 :[leaf,leafsym], q2: [leaf,leafsym], q3: [leaf,leafsym]...]
-    pub query_proofs: Vec<MerkleProof>,
-    pub final_poly: F,
+    pub query_proofs: Vec<MerkleProof>, // contains path, root, leaf.
+    pub final_poly: Vec<F>,
     pub pow_nonce: u64,
 }
 
-// impl<F: FieldImpl> Friproof<F> {
-//     pub fn verify_path (
-//         leaf: F,
-//         query_proof: MerkleProof,
-//         root: F,
-//     ) -> bool {
-//         //[sibling1, sibling 2]
-//         let path = query_proof.get_path::<F>();
-//         let path_slice = HostSlice::from_slice(path);
-//         let leaf_size = 4;//for 32 bit fields
-//         let hasher = Blake2s::new(leaf_size).unwrap();
-//         let mut output = vec![F::zero(); hasher.output_size().try_into().unwrap()];
-
-//         let compress = Blake2s::new(hasher.output_size()*2).unwrap();
-//         let mut output_compress = vec![F::zero();compress.output_size().try_into().unwrap()];
-        
-//         let binding = [leaf];
-//         let leaf_slice = HostSlice::from_slice(&binding);
-//         let mut output_slice = HostSlice::from_mut_slice(&mut output);
-//         let leaf_hash = hasher.hash(leaf_slice, &HashConfig::default(), output_slice).unwrap();
-//         let l = path.len();
-//         for i in 0..l-1 {
-//             let path_element_slice = HostSlice::from_slice(std::slice::from_ref(&path_slice[i]));
-//             let mut compressor = compress.hash(path_element_slice, &HashConfig::default(), );
-
-//         }
-//         false
-//     }
-// }
-
 pub struct Frilayerdata <F:FieldImpl> {
-    layer_code_words: Vec<Vec<F>>,
-    layer_trees: Vec<MerkleTree>,
+    pub layer_code_words: Vec<Vec<F>>,
+    pub layer_trees: Vec<MerkleTree>,
 }
 
-pub struct current_layer <F:FieldImpl>{
+pub struct Current_layer <F:FieldImpl>{
     pub current_code_word: Vec<F>,
 }
 
-impl <F: FieldImpl+ Arithmetic> current_layer<F>
+impl <F: FieldImpl+ Arithmetic> Current_layer<F>
 where
     F::Config: VecOps<F>,
 {
-
     pub fn fold_evals(
     &mut self,
     rou: F,
@@ -142,30 +109,23 @@ where
     }
 
     pub fn commit(
-        &mut self
+        &mut self,
     ) -> MerkleTree
     { 
-        println!("current code word: {:?}",self.current_code_word);
         //to replace this with generics and merkle config
         let leaf_size:u64 = (F::one()).to_bytes_le().len().try_into().unwrap();//4 for 32 bit fields
         let no_of_leaves =  self.current_code_word.len();
-        println!("leaf size for baby bear: {:?}",leaf_size);
-        println!("no of leaves: {:?}",no_of_leaves);
         let hasher = Blake2s::new(leaf_size).unwrap();
         let compress = Blake2s::new(hasher.output_size()*2).unwrap();
         let tree_height = no_of_leaves.ilog2() as usize;
-        print!("tree height: {:?}",tree_height);
-    
         let layer_hashes: Vec<&Hasher> = std::iter::once(&hasher)
             .chain(std::iter::repeat(&compress).take(tree_height))
-            .collect();
-        //binary tree
-        let mut config = MerkleTreeConfig::default();
-        
+            .collect();       
         let poly_slice: &mut [F] = self.current_code_word.as_mut_slice();
+        let merkle_config = MerkleTreeConfig::default();
         let merkle_tree = MerkleTree::new(&layer_hashes, leaf_size, 0).unwrap();
         merkle_tree
-            .build(HostSlice::from_slice(poly_slice), &config).unwrap();
+            .build(HostSlice::from_slice(poly_slice), &merkle_config).unwrap();
         merkle_tree
     }
     pub fn layer_query(
@@ -177,6 +137,21 @@ where
         let code_slice = HostSlice::<F>::from_slice(&self.current_code_word);
         layer_tree.get_proof(code_slice, query_index, false, &config).unwrap() 
 }
+    
+    pub fn test_verify_path (
+        &mut self,
+        layer_query_proof: MerkleProof,
+    ) -> bool {
+                //to replace this with generics and merkle config
+        let leaf_size:u64 = (F::one()).to_bytes_le().len().try_into().unwrap();//4 for 32 bit fields
+        let hasher = Blake2s::new(leaf_size).unwrap();
+        let compress = Blake2s::new(hasher.output_size()*2).unwrap();
+        let layer_hashes: Vec<&Hasher> = std::iter::once(&hasher)
+                .chain(std::iter::repeat(&compress).take(self.current_code_word.len().ilog2() as usize))
+                .collect();       
+        let verifier_tree = MerkleTree::new(&layer_hashes, leaf_size, 0).unwrap();
+        verifier_tree.verify(&layer_query_proof).unwrap()
+    }
 }
 
 

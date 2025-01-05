@@ -22,7 +22,7 @@ use hex::encode;
 
    let mut new_transcript = Transcript::new(b"test");
    let public = Fr::from_u32(99).to_bytes_le();
-   TranscriptProtocol::<Fr>::fri_domain_sep(&mut new_transcript, b"friv1", 2u64, public.clone());
+   TranscriptProtocol::<Fr>::fri_domain_sep(&mut new_transcript, b"friv1", 2u64, 1u64,public.clone());
    
    let t = Fr::from_u32(3);
    TranscriptProtocol::<Fr>::append_root(&mut new_transcript,b"scalar",&t);
@@ -102,7 +102,7 @@ fn test_pow() {
    
    let mut new_transcript = Transcript::new(b"test");
    let public = Fr::from_u32(99).to_bytes_le();
-   TranscriptProtocol::<Fr>::fri_domain_sep(&mut new_transcript, b"friv1", 2u64, public.clone());
+   TranscriptProtocol::<Fr>::fri_domain_sep(&mut new_transcript, b"friv1", 2u64, 1u64, public.clone());
    
    let t = Fr::from_u32(3);
    TranscriptProtocol::<Fr>::append_root(&mut new_transcript,b"scalar",&t);

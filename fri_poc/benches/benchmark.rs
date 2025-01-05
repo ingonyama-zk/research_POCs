@@ -26,7 +26,7 @@ let logsize=SAMPLES.ilog2();
 // this cannot compute cosets
 init_ntt_domain::<Fr>(1 << logsize);
 let rou: Fr = get_root_of_unity::<Fr>(SAMPLES.try_into().unwrap());
-let mut frilayer =  current_layer::<Fr> {
+let mut frilayer =  Current_layer::<Fr> {
     current_code_word: test_vec.clone(),
 
 };
