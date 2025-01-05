@@ -23,7 +23,7 @@ pub fn set_backend_cpu() {
 
 pub fn try_load_and_set_backend_gpu() {
     
-    icicle_runtime::load_backend("../Polynomial-API/cuda_backend/icicle/lib/backend").unwrap();
+    icicle_runtime::load_backend("../cuda_backend").unwrap();
     let device_gpu = Device::new("CUDA", 0);
     let is_cuda_device_available = icicle_runtime::is_device_available(&device_gpu);
     if is_cuda_device_available {
@@ -116,7 +116,7 @@ pub fn num_leading_zeros(bytes: Vec<u8>) -> usize {
 pub fn hash_fuse(a:Vec<u8>,b:Vec<u8>) -> Vec<u8>
 {
     let leaf_size:u64 = 4;//for 32 bit fields
-    let hasher = Blake2s::new(leaf_size).unwrap();
+    let hasher = Blake2s::new(leaf_size).unwrap(); 
     let mut fused_bytes: Vec<u8> = Vec::with_capacity(a.len() + b.len());
     fused_bytes.extend_from_slice(&a);
     fused_bytes.extend_from_slice(&b);
@@ -130,7 +130,7 @@ pub fn proof_of_work<F>(pow_bits:usize, transcript_challenge: F) -> u64
 where 
 F:FieldImpl
 {
-    (0u64..u64::MAX) // Create a parallel iterator
+    (0u64..u64::MAX) // Create a parallel iterator, how to run this using batch mode of the hash used?
         .find(|&nonce| {
             //goal is to find nonce such that H(challenge||nonce) =digest such that digest has pow_bits leading zeros
             let mut output = hash_fuse(transcript_challenge.to_bytes_le(),  nonce.to_le_bytes().to_vec());

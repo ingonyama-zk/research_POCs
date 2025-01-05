@@ -191,6 +191,7 @@ pub fn commit_and_verify(){
 
 #[test]
 pub fn commit_and_verify_random(){
+    try_load_and_set_backend_gpu();
     let size:usize = 131072;
     let test_vec = generate_random_vector::<Fr>(size);
     let mut current = Current_layer {

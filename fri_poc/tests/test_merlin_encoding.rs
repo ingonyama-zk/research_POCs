@@ -2,7 +2,7 @@ use std::u64;
 
 #[cfg(test)] 
 use fri_poc::transcript::TranscriptProtocol;
-use fri_poc::utils::{hash_fuse, num_leading_zeros, proof_of_work};
+use fri_poc::utils::{hash_fuse, num_leading_zeros, proof_of_work, try_load_and_set_backend_gpu};
 use icicle_babybear::field::ScalarField as Fr;
 use icicle_runtime::memory::HostSlice;
 use merlin::{Transcript,TranscriptRngBuilder};
@@ -99,7 +99,7 @@ use hex::encode;
 #[test]
 //Shitty proof of work
 fn test_pow() {
-   
+   try_load_and_set_backend_gpu();
    let mut new_transcript = Transcript::new(b"test");
    let public = Fr::from_u32(99).to_bytes_le();
    TranscriptProtocol::<Fr>::fri_domain_sep(&mut new_transcript, b"friv1", 2u64, 1u64, public.clone());
