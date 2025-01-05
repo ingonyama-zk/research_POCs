@@ -1,23 +1,17 @@
 use core::ops::{Add, Mul, Sub};
 
-//use p3_field::{ExtensionField, Field, FieldAlgebra, FieldExtensionAlgebra};
-// use p3_matrix::dense::RowMajorMatrix;
-// use p3_matrix::Matrix;
-
-use icicle_core::
-    {field::Field,
-    traits::{Arithmetic,FieldConfig,FieldImpl,GenerateRandom,MontgomeryConvertible,},
-    };
-
+use p3_field::{ExtensionField, Field, FieldAlgebra, FieldExtensionAlgebra};
+use p3_matrix::dense::RowMajorMatrix;
+use p3_matrix::Matrix;
 
 /// An AIR (algebraic intermediate representation).
 pub trait BaseAir<F>: Sync {
     /// The number of columns (a.k.a. registers) in this AIR.
     fn width(&self) -> usize;
 
-    // fn preprocessed_trace(&self) -> Option<RowMajorMatrix<F>> {
-    //     None
-    // }
+    fn preprocessed_trace(&self) -> Option<RowMajorMatrix<F>> {
+        None
+    }
 }
 
 ///  An AIR with 0 or more public values.
@@ -33,7 +27,7 @@ pub trait Air<AB: AirBuilder>: BaseAir<AB::F> {
 }
 
 pub trait AirBuilder: Sized {
-    type F: Fieldimpl;
+    type F: Field;
 
     type Expr: FieldAlgebra
         + From<Self::F>

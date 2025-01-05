@@ -2,24 +2,21 @@
 
 use core::array;
 
-// use p3_field::{Field, FieldAlgebra};
-use icicle_core::
-    {field::Field,
-    traits::{Arithmetic,FieldConfig,FieldImpl,GenerateRandom,MontgomeryConvertible,},
-    };
+use p3_field::{Field, FieldAlgebra};
+
 use crate::AirBuilder;
 
 /// Pack a collection of bits into a number.
 ///
 /// Given vec = [v0, v1, ..., v_n] returns v0 + 2v_1 + ... + 2^n v_n
 #[inline]
-pub fn pack_bits_le<F, Var, I>(iter: I) -> F
+pub fn pack_bits_le<FA, Var, I>(iter: I) -> FA
 where
-    F: FieldImpl+Arithmetic+FieldConfig,
-    Var: Into<F> + Clone,
+    FA: FieldAlgebra,
+    Var: Into<FA> + Clone,
     I: DoubleEndedIterator<Item = Var>,
 {
-    let mut output = F::zero();
+    let mut output = FA::ZERO;
     for elem in iter.rev() {
         output = output.double();
         output += elem.clone().into();
@@ -31,7 +28,7 @@ where
 ///
 /// For boolean inputs, `x ^ y = x + y - 2 xy`.
 #[inline(always)]
-pub fn xor<FA: FieldImpl+Arithmetic>(x: FA, y: FA) -> FA {
+pub fn xor<FA: FieldAlgebra>(x: FA, y: FA) -> FA {
     x.clone() + y.clone() - x * y.double()
 }
 
@@ -39,7 +36,7 @@ pub fn xor<FA: FieldImpl+Arithmetic>(x: FA, y: FA) -> FA {
 ///
 /// For boolean inputs `x ^ y ^ z = x + y + z - 2(xy + xz + yz) + 4xyz`.
 #[inline(always)]
-pub fn xor3<FA: FieldImpl+Arithmetic>(x: FA, y: FA, z: FA) -> FA {
+pub fn xor3<FA: FieldAlgebra>(x: FA, y: FA, z: FA) -> FA {
     // The cheapest way to implement this polynomial is to simply apply xor twice.
     // This costs 2 adds, 2 subs, 2 muls and 2 doubles.
     xor(x, xor(y, z))
@@ -49,7 +46,7 @@ pub fn xor3<FA: FieldImpl+Arithmetic>(x: FA, y: FA, z: FA) -> FA {
 ///
 /// For boolean inputs `(!x) & y = (1 - x)y`
 #[inline(always)]
-pub fn andn<FA: FieldImpl+Arithmetic>(x: FA, y: FA) -> FA {
+pub fn andn<FA: FieldAlgebra>(x: FA, y: FA) -> FA {
     (FA::ONE - x) * y
 }
 
@@ -57,7 +54,7 @@ pub fn andn<FA: FieldImpl+Arithmetic>(x: FA, y: FA) -> FA {
 ///
 /// Verifies at debug time that all inputs are boolean.
 #[inline(always)]
-pub fn checked_xor<F: FieldImpl, const N: usize>(xs: [F; N]) -> F {
+pub fn checked_xor<F: Field, const N: usize>(xs: [F; N]) -> F {
     xs.into_iter().fold(F::ZERO, |acc, x| {
         debug_assert!(x.is_zero() || x.is_one());
         xor(acc, x)
@@ -68,7 +65,7 @@ pub fn checked_xor<F: FieldImpl, const N: usize>(xs: [F; N]) -> F {
 ///
 /// Verifies at debug time that both inputs are boolean.
 #[inline(always)]
-pub fn checked_andn<F: FieldImpl>(x: F, y: F) -> F {
+pub fn checked_andn<F: Field>(x: F, y: F) -> F {
     debug_assert!(x.is_zero() || x.is_one());
     debug_assert!(y.is_zero() || y.is_one());
     andn(x, y)
@@ -78,7 +75,7 @@ pub fn checked_andn<F: FieldImpl>(x: F, y: F) -> F {
 ///
 /// The output array is in little-endian order.
 #[inline]
-pub fn u32_to_bits_le<FA: FieldImpl+Arithmetic>(val: u32) -> [FA; 32] {
+pub fn u32_to_bits_le<FA: FieldAlgebra>(val: u32) -> [FA; 32] {
     // We do this over F::from_canonical_u32 as from_canonical_u32 can be slow
     // like in the case of monty field.
     array::from_fn(|i| {
