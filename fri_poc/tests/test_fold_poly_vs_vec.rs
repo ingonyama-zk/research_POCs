@@ -1,24 +1,20 @@
 use std::iter;
-use hex;
 
 
 use icicle_core::
-    {field::Field, hash::{HashConfig, Hasher, HasherHandle}, 
-    merkle::{MerkleProof,MerkleTree,MerkleTreeConfig,PaddingPolicy}, 
+    {merkle::MerkleTree, 
     polynomials::UnivariatePolynomial, 
-    traits::{Arithmetic,FieldConfig,FieldImpl,GenerateRandom}, 
-    vec_ops::{add_scalars, mul_scalars, scalar_mul, slice, sub_scalars, VecOps, VecOpsConfig},
-    ntt::{get_root_of_unity, initialize_domain, ntt, ntt_inplace, NTTConfig, NTTInitDomainConfig,NTTDir},
+    traits::{Arithmetic,FieldImpl},
+    ntt::{get_root_of_unity,ntt,NTTConfig,NTTDir},
     };
-use icicle_hash::blake2s::Blake2s;
 
-use icicle_runtime::{memory::HostSlice,Device};
+use icicle_runtime::memory::HostSlice;
 
 
 
 use icicle_babybear::{
-    field::{ExtensionField as Fr4, ScalarCfg, ScalarField as Fr},
-    polynomials::DensePolynomial, vec_ops};
+    field::ScalarField as Fr,
+    polynomials::DensePolynomial};
 
 use fri_poc::data_structures::*;
 use fri_poc::utils::*;
@@ -45,32 +41,44 @@ pub fn poly_fold_vector_fold_sanity_no_coset(){
     init_ntt_domain::<Fr>(1 << logsize);
     let v = vec![Fr::from_u32(1),Fr::from_u32(2),Fr::from_u32(3),Fr::from_u32(4),Fr::from_u32(5),Fr::from_u32(6),Fr::from_u32(7),Fr::from_u32(8)];
     let poly = DensePolynomial::from_rou_evals(HostSlice::from_slice(&v), v.len());
-    let gamma = Fr::from_u32(2);
+    let gamma = Fr::from_u32(200);
     let mut frilayer =  Current_layer::<Fr> {
         current_code_word: v.clone(),
     };
 
     let mut evals = vec![Fr::zero();  size/2];
-    let mut eval_slice = HostSlice::from_mut_slice(&mut evals[..]);
+    let eval_slice = HostSlice::from_mut_slice(&mut evals[..]);
     let p_fold = fold_poly(poly, gamma);
     p_fold.eval_on_rou_domain(logsize-1, eval_slice);
     println!("p fold evals : coset gen =1 {:?}",eval_slice); 
 
-    let rou_baby_bear: Fr = get_root_of_unity::<Fr>(size.try_into().unwrap());
-    let v_fold = frilayer.fold_evals(rou_baby_bear, Fr::from_u32(1u32),gamma);
+    let v_fold = frilayer.fold_evals( Fr::from_u32(1u32),gamma);
     println!("fold vec in evals: coset gen =1  {:?} ",v_fold);
+
+    let rou = get_root_of_unity::<Fr>(size.try_into().unwrap());
+    let rou_inv= rou.inv();
+    let two_inv = (Fr::from_u32(2)).inv();
+    let mut f_e = Vec::<Fr>::new();
+    let mut f_o = Vec::<Fr>::new();
+    let mut f_f = Vec::<Fr>::new();
+    for i in 0..size/2{
+        f_e.push((v[i]+v[i+4])*two_inv);
+        f_o.push((v[i]-v[i+4])*two_inv* pow(rou_inv, i.try_into().unwrap()));
+        f_f.push(f_e[i] + gamma * f_o[i]);
+    }
+    println!("manual compute {:?}" , f_f);
 }
 
-/// original domain H: [1,w,w^2,...]
-/// folded original domain H^2: [1,w^2,w^4,...]
-/// coset:D: g[1,w,w^2,...]
-/// Folded coset: D^2: g^2[1,w^2,w^4,...]
-/// v = [a_0,a_1,a_2,a_3,a_4,a_5,a_6,a_7]
-/// Coset_Ntt_D[v] = v_eval in D
-/// v_{fold} = (v[gw^i] + v[-gw^i])/2 +  beta(v[gw^i] - v[-gw^i])/2gw^i |_{i=0..n/2} evals in D^2
-/// P(X) coeff form with a_i as coefficients in H
-/// P_fold(x) = P.even + \beta p.odd in H^2
-/// P_{fold}(g^2 x) = NTT_D^2(P_{fold}(x))
+// original domain H: [1,w,w^2,...]
+// folded original domain H^2: [1,w^2,w^4,...]
+// coset:D: g[1,w,w^2,...]
+// Folded coset: D^2: g^2[1,w^2,w^4,...]
+// v = [a_0,a_1,a_2,a_3,a_4,a_5,a_6,a_7]
+// Coset_Ntt_D[v] = v_eval in D
+// v_{fold} = (v[gw^i] + v[-gw^i])/2 +  beta(v[gw^i] - v[-gw^i])/2gw^i |_{i=0..n/2} evals in D^2
+// P(X) coeff form with a_i as coefficients in H
+// P_fold(x) = P.even + \beta p.odd in H^2
+// P_{fold}(g^2 x) = NTT_D^2(P_{fold}(x))
 #[test]
 pub fn poly_fold_vector_fold_sanity_coset(){
 
@@ -100,7 +108,7 @@ pub fn poly_fold_vector_fold_sanity_coset(){
     //fold coset eval vec.
     let coset_gen3: Fr = Fr::from_u32(3u32);
     let rou_baby_bear: Fr = get_root_of_unity::<Fr>(size.try_into().unwrap());
-    let v_fold = frilayer.fold_evals(rou_baby_bear, coset_gen3,gamma);
+    let v_fold = frilayer.fold_evals( coset_gen3,gamma);
     println!("fold vec in evals: coset D^2  {:?} ",v_fold);
 
     //fold poly in coeff
@@ -170,7 +178,7 @@ pub fn fold_evals_test(){
         current_code_word: v_eval_coset_vec.clone(),
     };
     let gamma = Fr::from_u32(2);
-    let v_fold =current.fold_evals(rou_baby_bear, cfg.coset_gen,gamma);
+    let v_fold =current.fold_evals(cfg.coset_gen,gamma);
     println!("fold vec in evals: coset D^2  {:?} ",v_fold);
 }
 
@@ -185,6 +193,7 @@ pub fn commit_and_verify(){
     let tree: MerkleTree = current.commit();
     let proof = current.layer_query(1, &tree);
     let result = current.test_verify_path(proof);
+    println!("result {:?}",result);
     assert!(result);
     drop(tree);
 }

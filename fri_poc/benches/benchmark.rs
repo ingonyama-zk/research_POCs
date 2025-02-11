@@ -1,18 +1,15 @@
 use criterion::{criterion_group, criterion_main, Criterion};
-use fri_poc::{utils::*,data_structures::*,transcript::*};
+use fri_poc::{utils::*,data_structures::*};
 
-use icicle_core::
-    {field::Field, hash::{self, HashConfig, Hasher, HasherHandle}, merkle::{MerkleProof,MerkleTree,MerkleTreeConfig,PaddingPolicy}, 
-    ntt::{get_root_of_unity, initialize_domain, ntt, ntt_inplace, NTTConfig, NTTInitDomainConfig,NTTDir}, 
+use icicle_core::{
+    ntt::{get_root_of_unity,ntt, NTTConfig,NTTDir}, 
     polynomials::UnivariatePolynomial, 
-    traits::{Arithmetic,FieldConfig,FieldImpl,GenerateRandom,MontgomeryConvertible}, vec_ops::*
-    };
-use icicle_hash::{blake2s::Blake2s, keccak::Keccak256};
+    traits::{Arithmetic, FieldImpl}};
 use icicle_runtime::memory::HostSlice;
 
 use icicle_babybear::{
-    field::{ExtensionField as Fr4, ScalarCfg, ScalarField as Fr},
-    polynomials::DensePolynomial, vec_ops};
+    field::ScalarField as Fr,
+    polynomials::DensePolynomial};
 
 const SAMPLES: usize = 131072; // 2^17
 
@@ -25,14 +22,13 @@ let challenge = Fr::from_u32(rand::random::<u32>());
 let logsize=SAMPLES.ilog2();
 // this cannot compute cosets
 init_ntt_domain::<Fr>(1 << logsize);
-let rou: Fr = get_root_of_unity::<Fr>(SAMPLES.try_into().unwrap());
 let mut frilayer =  Current_layer::<Fr> {
     current_code_word: test_vec.clone(),
 
 };
 
 let mut poly = DensePolynomial::from_rou_evals(HostSlice::from_slice(&test_vec), test_vec.len());
-let mut cfg = NTTConfig::<Fr>::default();
+let cfg = NTTConfig::<Fr>::default();
 fn fold_poly(
     poly: DensePolynomial,
     beta: Fr,// this should be in extension field for FRI security. currently unsupported
@@ -43,11 +39,28 @@ fn fold_poly(
 }
 let mut new_domain_evals = vec![Fr::zero();  SAMPLES];
 let new_domain_eval_size = HostSlice::from_mut_slice(&mut new_domain_evals[..]);
+let rou: Fr = get_root_of_unity::<Fr>(SAMPLES.try_into().unwrap());
+let rou_inv: Fr = rou.inv();
+let two_inv:Fr = Fr::from_u32(2).inv();
+let mut inv_domain: Vec<Fr> = Vec::with_capacity(SAMPLES / 2);
+let mut current = Fr::one(); // can define coset gen inv here if we want
+
+//precompute domain and access in strides
+for _ in 0..(SAMPLES/ 2) {
+    inv_domain.push(current);
+    current = current*rou_inv; 
+}
+
 group.bench_function("Fold in two vec", |b| b.iter(
     ||{
-        let _res = frilayer.fold_evals(rou, Fr::one(), challenge);
+        let _res = frilayer.fold_evals( Fr::one(), challenge);
     })
 );
+
+group.bench_function("fold in two precompute domain", |b|b.iter(
+    ||{
+        let _res = frilayer.fold_evals_precompute_domain(&mut inv_domain, &two_inv, challenge);
+    }));
 
 group.bench_function("fold in two poly", |b|b.iter(
     || {
@@ -58,5 +71,6 @@ group.bench_function("fold in two poly", |b|b.iter(
 group.finish();
 
 }
+
 criterion_group!(benches,bench_fold2);
 criterion_main!(benches);

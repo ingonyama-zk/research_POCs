@@ -20,14 +20,18 @@ hex = {version = "0.4"}
 
 merlin = {version = "3.0.0"}
 #merlin ={ version = "3.0.0", features = ["debug-transcript"]}
-rand = "0.8"
+rand = "0.9"
 clap = { version = "<=4.4.12", features = ["derive"] }
 bitvec = "1.0.1"
 rayon = "1.10"
+rand_chacha = "0.9.0"
+log = "0.4.25"
+env_logger = "0.11.6"
+
 
 [features]
-# nightly = []
-# debug-transcript = ["hex"]
+nightly = []
+#debug-transcript = ["hex"]
 
 [dev-dependencies]
 criterion = "0.5.1"
@@ -35,3 +39,4 @@ criterion = "0.5.1"
 [[bench]]
 name = "benchmark"
 harness = false
+

@@ -1,18 +1,15 @@
-use bitvec::vec;
 use icicle_core::
-    {field::Field, hash::{HashConfig, Hasher, HasherHandle}, 
-    merkle::{MerkleProof,MerkleTree,MerkleTreeConfig,PaddingPolicy}, 
+    {hash::HashConfig,
     polynomials::UnivariatePolynomial, 
-    traits::{Arithmetic,FieldConfig,FieldImpl,GenerateRandom}, 
-    vec_ops::{add_scalars, mul_scalars, scalar_mul, slice, sub_scalars, VecOps, VecOpsConfig},
-    ntt::{get_root_of_unity, initialize_domain, ntt, ntt_inplace, NTTConfig, NTTInitDomainConfig,NTTDir, NTTDomain,NTT},
+    traits::{Arithmetic,FieldImpl,GenerateRandom},
+    ntt::{get_root_of_unity, initialize_domain, ntt, NTTConfig, NTTInitDomainConfig,NTTDir, NTTDomain,NTT},
     };
 use icicle_runtime::{memory::HostSlice,Device};
-use rand::distributions::uniform::UniformSampler;
-
-use crate::data_structures::Friconfig;
 use icicle_hash::blake2s::Blake2s;
-use rayon::prelude::*;
+
+
+use rand::{SeedableRng, Rng,distr::Uniform};
+use rand_chacha::ChaCha20Rng;
 
 pub fn set_backend_cpu() {
     
@@ -87,7 +84,7 @@ where
     poly_eval
 }
 
-pub fn eval_to_eval_blowup<F:FieldImpl>(mut input: Vec<F>, size:usize) -> Vec<F> 
+pub fn eval_to_eval_blowup<F:FieldImpl>(input: Vec<F>, size:usize) -> Vec<F> 
 where
         <F as FieldImpl>::Config: NTTDomain<F> +NTT<F,F>,
 {
@@ -95,7 +92,7 @@ where
     init_ntt_domain::<F>(1 << logsize);
     let ntt_cfg: NTTConfig<F> = NTTConfig::<F>::default();
     let mut poly_coeff: Vec<F> = vec![F::zero(); input.len()];
-    ntt(HostSlice::from_slice(&input), NTTDir::kInverse, &ntt_cfg, HostSlice::from_mut_slice(&mut &mut poly_coeff[..])).unwrap();
+    ntt(HostSlice::from_slice(&input), NTTDir::kInverse, &ntt_cfg, HostSlice::from_mut_slice(&mut poly_coeff[..])).unwrap();
     coeff_to_eval_blowup(poly_coeff, size)
 }
 
@@ -133,7 +130,7 @@ F:FieldImpl
     (0u64..u64::MAX) // Create a parallel iterator, how to run this using batch mode of the hash used?
         .find(|&nonce| {
             //goal is to find nonce such that H(challenge||nonce) =digest such that digest has pow_bits leading zeros
-            let mut output = hash_fuse(transcript_challenge.to_bytes_le(),  nonce.to_le_bytes().to_vec());
+            let output = hash_fuse(transcript_challenge.to_bytes_le(),  nonce.to_le_bytes().to_vec());
                  // Count leading zeros in the bit representation of the nonce
             let leading_zeros: usize = num_leading_zeros(output);
     
@@ -142,4 +139,31 @@ F:FieldImpl
             })
             .expect("No nonce found") // Safeguard: this should never trigger unless overflow
 
+}
+
+pub fn generate_samples_in_range(seed_bytes: Vec<u8>, size: usize, max:usize) -> Vec<usize> {
+    let mut seed = [0u8; 32];
+    let len = seed_bytes.len().min(32);
+    seed[..len].copy_from_slice(&seed_bytes[..len]);
+
+    let mut rng = ChaCha20Rng::from_seed(seed);
+
+    (0..size).map(|_| rng.sample(Uniform::new(0,max).expect("error"))).collect()
+}
+
+pub fn pow<F>(mut base: F, mut exp: u32) -> F
+where
+    F: FieldImpl + Arithmetic,
+{
+    let mut result = F::one();
+    
+    while exp > 0 {
+        if exp % 2 == 1 {
+            result = result * base;
+        }
+        base = base.sqr();
+        exp /= 2;
+    }
+    
+    result
 }

@@ -1,21 +1,21 @@
 use std::iter;
 
 use icicle_core::
-    {field::Field, hash::{self, HashConfig, Hasher, HasherHandle}, 
-    merkle::{MerkleProof,MerkleTree,MerkleTreeConfig,PaddingPolicy}, 
-    polynomials::UnivariatePolynomial, 
-    traits::{Arithmetic,FieldConfig,FieldImpl,GenerateRandom,MontgomeryConvertible},
-    vec_ops::*
+    {hash::Hasher, 
+    merkle::{MerkleProof,MerkleTree,MerkleTreeConfig}, 
+    ntt::{get_root_of_unity, NTTDomain}, 
+    traits::{Arithmetic,FieldImpl}, vec_ops::*
     };
-use icicle_hash::{blake2s::Blake2s, keccak::Keccak256};
+use icicle_hash::blake2s::Blake2s;
 use icicle_runtime::memory::HostSlice;
 
+#[derive(Clone,Copy)]
 pub struct Friconfig{
-    pub(crate) blow_up_factor: usize, 
-    pub(crate) folding_factor: usize, 
-    pub(crate) pow_bits: usize,
-    pub(crate) num_queries: usize,
-    pub(crate) stopping_size: usize, //should be power of two
+    pub blow_up_factor: usize, 
+    pub folding_factor: usize, 
+    pub pow_bits: usize,
+    pub num_queries: usize,
+    pub stopping_size: usize, //should be power of two
     //pub (crate) Commitment_scheme: Merkle/MMCS,
 }
 
@@ -29,9 +29,19 @@ pub struct Friconfig{
 //     pub merkle_conf: MerkleTreeConfig,
 // }
 pub struct Friproof<F:FieldImpl> {
-    pub query_proofs: Vec<MerkleProof>, // contains path, root, leaf.
+    pub query_proofs: Vec<Vec<MerkleProof>>, // contains path, root, leaf.
     pub final_poly: Vec<F>,
     pub pow_nonce: u64,
+}
+
+impl <F:FieldImpl> Friproof<F> {
+    pub fn new() -> Self {
+        Friproof {
+            query_proofs: Vec::<Vec<MerkleProof>>::new(),
+            final_poly: Vec::<F>::new(),
+            pow_nonce: 0u64,
+        }
+    }
 }
 
 pub struct Frilayerdata <F:FieldImpl> {
@@ -39,23 +49,99 @@ pub struct Frilayerdata <F:FieldImpl> {
     pub layer_trees: Vec<MerkleTree>,
 }
 
+impl <F: FieldImpl> Frilayerdata <F> {
+    pub fn new() -> Self {
+        Frilayerdata {
+            layer_code_words: Vec::<Vec<F>>::new(),
+            layer_trees: Vec::<MerkleTree>::new(),
+        }
+    } 
+    pub fn total_layers(&self) -> usize {
+        self.layer_code_words.len()
+    }
+}
 pub struct Current_layer <F:FieldImpl>{
     pub current_code_word: Vec<F>,
 }
 
-impl <F: FieldImpl+ Arithmetic> Current_layer<F>
+impl <F> Current_layer<F>
 where
-    F::Config: VecOps<F>,
+    F: FieldImpl+Arithmetic,
+    F::Config: VecOps<F> +NTTDomain<F>,
 {
+    pub fn new() -> Self {
+        Current_layer {
+            current_code_word:Vec::<F>::new(),
+        }
+    } 
+
+    pub fn fold_evals_precompute_domain(
+    &mut self,
+    inv_domain: &mut Vec<F>,
+    &two_inv: &F,
+    alpha: F,
+    ) -> Vec<F> 
+    {
+        let len: usize = self.current_code_word.len();
+        let lenu64:u64 = len.try_into().unwrap();
+        let mut rou_inv_slice =HostSlice::from_mut_slice(&mut inv_domain[..]);
+        let v_slice = HostSlice::from_mut_slice(&mut self.current_code_word[..]); 
+          //init arrays
+          let mut v1 = vec![F::zero(); len / 2];
+          let mut v2 = vec![F::zero(); len / 2];
+          let mut odd = vec![F::zero(); len / 2];
+          let mut even = vec![F::zero(); len / 2];
+          let mut odd1 = vec![F::zero(); len / 2];
+          let mut odd2 = vec![F::zero(); len / 2];
+          let mut res = vec![F::zero(); len / 2];
+          let mut resf = vec![F::zero(); len / 2];
+          let mut rouf=  vec![F::zero(); len / 2];  
+
+          let mut odd_slice = HostSlice::from_mut_slice(&mut odd[..]);
+        let mut even_slice =  HostSlice::from_mut_slice(&mut even[..]);
+        let mut odd1_slice =  HostSlice::from_mut_slice(&mut odd1[..]);
+        let mut odd2_slice =  HostSlice::from_mut_slice(&mut odd2[..]);
+        let mut res_slice =  HostSlice::from_mut_slice(&mut res[..]);
+        let mut resf_slice =  HostSlice::from_mut_slice(&mut resf[..]);
+        let v1_slice = HostSlice::from_mut_slice(&mut v1[..]);
+        let v2_slice = HostSlice::from_mut_slice(&mut v2[..]);
+
+        let cfg = VecOpsConfig::default();
+        //get odd and even slice
+        let _ = slice(v_slice, 0, 1, lenu64, lenu64/2, &cfg, v1_slice);
+        let _ = slice(v_slice, lenu64/2, 1, lenu64, lenu64/2, &cfg, v2_slice);
+        //e=v1(x)+v2(-x)
+        add_scalars(v1_slice, v2_slice,even_slice, &cfg).unwrap();
+        //o=v1(x)-v2(-x)
+        sub_scalars(v1_slice, v2_slice, odd_slice, &cfg).unwrap();
+        let mut teven=  vec![F::zero(); len / 2];  
+        let mut teven_slice = HostSlice::from_mut_slice(&mut teven[..]);
+        let mut todd=  vec![F::zero(); len / 2];  
+        let mut todd_slice = HostSlice::from_mut_slice(&mut todd[..]);
+        let mut todd1=  vec![F::zero(); len / 2];  
+        let mut todd_slice1 = HostSlice::from_mut_slice(&mut todd1[..]);
+        let mut todd2=  vec![F::zero(); len / 2];  
+        let mut todd_slice2 = HostSlice::from_mut_slice(&mut todd2[..]);
+        let two_inv:F= (F::from_u32(2)).inv();
+        scalar_mul(HostSlice::from_slice(&mut [two_inv]), even_slice, teven_slice, &cfg).unwrap();
+        scalar_mul(HostSlice::from_slice(&mut [two_inv]), odd_slice, todd_slice, &cfg).unwrap();
+        mul_scalars(rou_inv_slice, todd_slice, todd_slice1, &cfg).unwrap();
+        scalar_mul(HostSlice::from_slice(&mut [alpha]), todd_slice1, todd_slice2, &cfg).unwrap();
+        add_scalars(teven_slice, todd_slice2, res_slice, &cfg).unwrap();
+        let res: Vec<F> = res_slice.as_slice().to_vec();
+        res
+    }
+
+    //this is real shit fold
     pub fn fold_evals(
     &mut self,
-    rou: F,
     coset_gen: F,
     alpha: F,
     ) -> Vec<F>
     {    
-        let rou_inv = rou.inv();    
         let len:usize = self.current_code_word.len();
+        let mut rou: F = get_root_of_unity::<F>(len.try_into().unwrap());
+        let mut rou_inv = rou.inv();   
         let lenu64:u64 = len.try_into().unwrap();
         let gen = F::one();
         
@@ -63,7 +149,7 @@ where
         let mut rou_inv_vec: Vec<F> = iter::successors(Some(gen), |p| Some(*p * rou_inv))
             .take(len/2)
             .collect();
-    
+//        println!("rou_inv_vec {:?}",rou_inv_vec.clone());
         let mut rou_inv_slicebc =HostSlice::from_mut_slice(&mut rou_inv_vec[..]);
         let v_slice = HostSlice::from_mut_slice(&mut self.current_code_word[..]);
        //init arrays
@@ -71,15 +157,15 @@ where
         let mut v2 = vec![F::zero(); len / 2];
         let mut odd = vec![F::zero(); len / 2];
         let mut even = vec![F::zero(); len / 2];
-        let mut even1 = vec![F::zero(); len / 2];
-        let mut even2 = vec![F::zero(); len / 2];
+        let mut odd1 = vec![F::zero(); len / 2];
+        let mut odd2 = vec![F::zero(); len / 2];
         let mut res = vec![F::zero(); len / 2];
         let mut resf = vec![F::zero(); len / 2];
         let mut rouf=  vec![F::zero(); len / 2];  
         let mut odd_slice = HostSlice::from_mut_slice(&mut odd[..]);
         let mut even_slice =  HostSlice::from_mut_slice(&mut even[..]);
-        let mut even1_slice =  HostSlice::from_mut_slice(&mut even1[..]);
-        let mut even2_slice =  HostSlice::from_mut_slice(&mut even2[..]);
+        let mut odd1_slice =  HostSlice::from_mut_slice(&mut odd1[..]);
+        let mut odd2_slice =  HostSlice::from_mut_slice(&mut odd2[..]);
         let mut res_slice =  HostSlice::from_mut_slice(&mut res[..]);
         let mut resf_slice =  HostSlice::from_mut_slice(&mut resf[..]);
         let v1_slice = HostSlice::from_mut_slice(&mut v1[..]);
@@ -92,19 +178,27 @@ where
         //get odd and even slice
         let _ = slice(v_slice, 0, 1, lenu64, lenu64/2, &cfg, v1_slice);
         let _ = slice(v_slice, lenu64/2, 1, lenu64, lenu64/2, &cfg, v2_slice);
-        //o=v1(x)+v2(-x)
-        add_scalars(v1_slice, v2_slice,odd_slice, &cfg).unwrap();
-        //e=v1(x)-v2(-x)
-        sub_scalars(v1_slice, v2_slice, even_slice, &cfg).unwrap();
-        //e1= e* w^{-i}
-        mul_scalars(rou_inv_slice, even_slice, even1_slice, &cfg).unwrap();
-        //e2=e* w^{-i}*alpha
-        scalar_mul(HostSlice::from_slice(&mut [alpha]), even1_slice, even2_slice, &cfg).unwrap();
-        //o+e2
-        add_scalars(odd_slice, even2_slice, res_slice, &cfg).unwrap();
-        let two_inv:F= F::from_u32(2).inv();
-        scalar_mul(HostSlice::from_mut_slice(&mut [two_inv]), res_slice, resf_slice, &cfg).unwrap();
-        let res: Vec<F> = resf_slice.as_slice().to_vec();
+        //e=v1(x)+v2(-x)
+        add_scalars(v1_slice, v2_slice,even_slice, &cfg).unwrap();
+        //o=v1(x)-v2(-x)
+        sub_scalars(v1_slice, v2_slice, odd_slice, &cfg).unwrap();
+        //o1= o* w^{-i}
+        /////
+        let mut teven=  vec![F::zero(); len / 2];  
+        let mut teven_slice = HostSlice::from_mut_slice(&mut teven[..]);
+        let mut todd=  vec![F::zero(); len / 2];  
+        let mut todd_slice = HostSlice::from_mut_slice(&mut todd[..]);
+        let mut todd1=  vec![F::zero(); len / 2];  
+        let mut todd_slice1 = HostSlice::from_mut_slice(&mut todd1[..]);
+        let mut todd2=  vec![F::zero(); len / 2];  
+        let mut todd_slice2 = HostSlice::from_mut_slice(&mut todd2[..]);
+        let two_inv:F= (F::from_u32(2)).inv();
+        scalar_mul(HostSlice::from_slice(&mut [two_inv]), even_slice, teven_slice, &cfg).unwrap();
+        scalar_mul(HostSlice::from_slice(&mut [two_inv]), odd_slice, todd_slice, &cfg).unwrap();
+        mul_scalars(rou_inv_slice, todd_slice, todd_slice1, &cfg).unwrap();
+        scalar_mul(HostSlice::from_slice(&mut [alpha]), todd_slice1, todd_slice2, &cfg).unwrap();
+        add_scalars(teven_slice, todd_slice2, res_slice, &cfg).unwrap();
+        let res: Vec<F> = res_slice.as_slice().to_vec();
         res
     }
 
@@ -137,7 +231,8 @@ where
         let code_slice = HostSlice::<F>::from_slice(&self.current_code_word);
         layer_tree.get_proof(code_slice, query_index, false, &config).unwrap() 
 }
-    
+    ///for diagnostic: This uses the actual tree, so if it didnt pass 
+    /// it indicates an error in the commit part or merkle definition.
     pub fn test_verify_path (
         &mut self,
         layer_query_proof: MerkleProof,
@@ -150,7 +245,9 @@ where
                 .chain(std::iter::repeat(&compress).take(self.current_code_word.len().ilog2() as usize))
                 .collect();       
         let verifier_tree = MerkleTree::new(&layer_hashes, leaf_size, 0).unwrap();
-        verifier_tree.verify(&layer_query_proof).unwrap()
+        let result = verifier_tree.verify(&layer_query_proof);
+        println!("result prover {:?}",result);
+        result.unwrap()
     }
 }
 
