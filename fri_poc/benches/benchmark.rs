@@ -10,11 +10,13 @@ use icicle_runtime::memory::HostSlice;
 use icicle_babybear::{
     field::ScalarField as Fr,
     polynomials::DensePolynomial};
+use merlin::Transcript;
+use fri_poc::prover::prove;
 
 const SAMPLES: usize = 131072; // 2^17
 
 
-pub fn bench_fold2(c:&mut Criterion){
+pub fn bench_fold(c:&mut Criterion){
 try_load_and_set_backend_gpu();
 let mut group = c.benchmark_group("Fold2");
 let test_vec = generate_random_vector::<Fr>(SAMPLES);
@@ -72,5 +74,42 @@ group.finish();
 
 }
 
-criterion_group!(benches,bench_fold2);
+pub fn bench_fri_prover(c:&mut Criterion){
+try_load_and_set_backend_gpu();
+let mut group = c.benchmark_group("FRIprove");
+let fri_config: Friconfig = Friconfig {
+    blow_up_factor: 4,
+    folding_factor: 2,
+    pow_bits: 10,
+    num_queries: 50,
+    stopping_size: 256,//2^0
+};
+
+let starting_size: usize = SAMPLES;
+let input_data: Vec<Fr> = generate_random_vector::<Fr>(starting_size);
+
+let size: usize = input_data.len()*fri_config.blow_up_factor;
+
+
+let is_coeff=true;//coeffs of a poly
+let code_word: Vec<Fr> = if is_coeff {
+//degree =2^k-1, i,e size = 2^k
+//if input is in coeff form and codeword required is 2^k*blowup
+coeff_to_eval_blowup::<Fr>(input_data.clone(), size)
+} else { 
+//eval = 2^k and we need size = 2^k*blowup
+eval_to_eval_blowup::<Fr>(input_data.clone(), size)
+};
+
+group.bench_function("Prover", |b| b.iter(
+    ||{
+    let mut prover_transcript = Transcript::new(b"Real_FRI");
+    let friproof:Friproof<Fr>  = prove::<Fr>(
+    fri_config,
+    &mut prover_transcript,
+    code_word.clone());
+    })
+);
+}
+criterion_group!(benches,bench_fold,bench_fri_prover);
 criterion_main!(benches);

@@ -20,7 +20,6 @@ where
     F: FieldImpl+Arithmetic,
     F::Config: VecOps<F> + NTTDomain<F> + NTT<F, F>,
 {
-env_logger::init();
 //let protocol_security = 
 let size: usize = code_word.len();
 debug!("prover_size {:?}",size);

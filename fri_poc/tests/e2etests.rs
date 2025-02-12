@@ -13,6 +13,8 @@ use fri_poc::prover::*;
 #[test]
 
 fn diagnostic_prover_test() {
+    env_logger::init();
+
     let fri_config: Friconfig = Friconfig {
         blow_up_factor: 4,
         folding_factor: 2,
@@ -66,7 +68,7 @@ verify(fri_config, friproof, &mut verifier_transcript).unwrap();
 //cargo test --package fri_poc --test e2etests -- e2e_fri_test --exact --show-output
 #[test]
 fn e2e_fri_test(){
-
+    env_logger::init();
     let fri_config: Friconfig = Friconfig {
         blow_up_factor: 4,
         folding_factor: 2,
