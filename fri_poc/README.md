@@ -10,13 +10,17 @@ RUST_LOG=info cargo run --release --package fri_poc --example frie2ecpu
 ```
 Current performance in M1
 ```
-[2025-02-13T14:58:43Z INFO  frie2e] Fri config: Friconfig { blow_up_factor: 4, folding_factor: 2, pow_bits: 10, num_queries: 50, stopping_size: 256 }
+[2025-02-13T16:05:10Z INFO  frie2ecpu] Fri config: Friconfig { blow_up_factor: 4, folding_factor: 2, pow_bits: 10, num_queries: 50, stopping_size: 256 }
 Initializing NTT domain for max size 2^18
-[2025-02-13T14:58:43Z INFO  frie2e] Code word log size: 18
-[2025-02-13T14:58:43Z INFO  frie2e] Setup: 33.732125ms
-[2025-02-13T14:58:43Z INFO  frie2e] Prove: 68.743083ms
-[2025-02-13T14:58:43Z INFO  frie2e] Verify time 4.82375ms
-[2025-02-13T14:58:43Z INFO  frie2e] Total time: 107.332958ms
+[2025-02-13T16:05:10Z INFO  frie2ecpu] Code word log size: 18
+[2025-02-13T16:05:10Z INFO  frie2ecpu] Setup: 29.85425ms
+[2025-02-13T16:05:10Z INFO  fri_poc::prover] prove: Precompute domain inverse 1.232291ms
+[2025-02-13T16:05:10Z INFO  fri_poc::prover] prove: Commit phase 56.905666ms
+[2025-02-13T16:05:10Z INFO  fri_poc::prover] prove: pow_phase 529.167µs
+[2025-02-13T16:05:10Z INFO  fri_poc::prover] prove: query phase 3.930291ms
+[2025-02-13T16:05:10Z INFO  frie2ecpu] Prove: 63.498666ms
+[2025-02-13T16:05:10Z INFO  frie2ecpu] Verify time 4.826ms
+[2025-02-13T16:05:10Z INFO  frie2ecpu] Total time: 98.205041ms
 ```
 A bit slower on a CPU
 
