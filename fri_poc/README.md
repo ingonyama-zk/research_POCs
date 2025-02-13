@@ -57,9 +57,9 @@ Initializing NTT domain for max size 2^12
 ```rust
 RUST_LOG=DEBUG cargo test --package fri_poc --test e2etests -- diagnostic_prover_test --exact --show-output
 ```
-* End to end real FRI test (if u have GPU load the backend)
+* End to end real FRI test
 ```rust
-cargo test --package fri_poc --test e2etests -- e2e_fri_test --exact --show-output
+cargo test --package fri_poc --test e2etests -- e2e_fri_test --exact --show-output 
 ```
 * Benches for a single fold iteration: Comparing folding without precompute, with precompute inverse domain and folding using polynomial API with criterion. 
 ```rust
