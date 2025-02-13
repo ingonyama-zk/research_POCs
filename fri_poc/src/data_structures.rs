@@ -1,15 +1,13 @@
 use std::iter;
 
 use icicle_core::
-    {hash::Hasher, 
-    merkle::{MerkleProof,MerkleTree,MerkleTreeConfig}, 
-    ntt::{get_root_of_unity, NTTDomain}, 
-    traits::{Arithmetic,FieldImpl}, vec_ops::*
+    {hash::Hasher, merkle::{MerkleProof,MerkleTree,MerkleTreeConfig}, ntt::{get_root_of_unity, NTTDomain}, polynomials::UnivariatePolynomial, traits::{Arithmetic,FieldImpl}, vec_ops::*
     };
 use icicle_hash::blake2s::Blake2s;
 use icicle_runtime::memory::HostSlice;
+use rand::distr::uniform::UniformSampler;
 
-#[derive(Clone,Copy)]
+#[derive(Clone,Copy,Debug)]
 pub struct Friconfig{
     pub blow_up_factor: usize, 
     pub folding_factor: usize, 
@@ -74,7 +72,6 @@ where
             current_code_word:Vec::<F>::new(),
         }
     } 
-
     pub fn fold_evals_precompute_domain(
     &mut self,
     inv_domain: &mut Vec<F>,
