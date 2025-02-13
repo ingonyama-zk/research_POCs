@@ -1,3 +1,5 @@
+use std::time::Instant;
+
 use icicle_core::
     {merkle::{MerkleProof,MerkleTree},
     traits::{Arithmetic,FieldImpl},
@@ -5,7 +7,7 @@ use icicle_core::
     vec_ops::*,
     };
 use merlin::Transcript;
-use log::debug;
+use log::{debug,info};
 use crate::{data_structures::*,transcript::*,utils::*};
 
 // Prover can input a vector of coefficients, or a vector of evaluations (codeword).
@@ -24,7 +26,7 @@ where
 let size: usize = code_word.len();
 debug!("prover_size {:?}",size);
 
-
+let precompute_domain = Instant::now();
 //Begin precompute domain, if NTT domain was exposed could read it directly
 let rou: F = get_root_of_unity::<F>(size.try_into().unwrap());
 let rou_inv: F = rou.inv();
@@ -55,7 +57,8 @@ let mut friproof: Friproof<F> = Friproof::<F>::new();
 let mut current_layer: Current_layer<F> = Current_layer::new();
 current_layer.current_code_word= code_word.clone();
 
-
+info!("prove: Precompute domain inverse {:?}",precompute_domain.elapsed());
+let commit_phase = Instant::now();
 //commit phase
 for j in 0..num_rounds {
     debug!("round: {:?}, current_code_word: {:?}",j, current_layer.current_code_word.clone());
@@ -88,12 +91,15 @@ for j in 0..num_rounds {
         break;
     }
 }
-
-//proof of work
+info!("prove: Commit phase {:?}",commit_phase.elapsed());
+set_backend_cpu();
+let pow_time = Instant::now();
+//proof of work is not parallelized yet so better do query and pow in cpu
 let current_challenge:F = <Transcript as TranscriptProtocol<F>>::challenge_scalar(transcript, b"challenge");
 debug!("POW_challenge {:?}",current_challenge);
 let nonce: u64 = proof_of_work::<F>(fri_config.pow_bits, current_challenge);
 debug!("nonce {:?}",nonce);
+info!("prove: pow_phase {:?}",pow_time.elapsed());
 
 //add nonce to transcript
 <Transcript as TranscriptProtocol<F>>::add_nonce(transcript, nonce);
@@ -106,8 +112,8 @@ debug!("prover_seed for sampling based on transcript {:?}",seed);
 let query_indices: Vec<usize> = generate_samples_in_range(seed, fri_config.num_queries, size/fri_config.folding_factor);
 debug!("top layer query_indices {:?}",query_indices);
 
-
 //query phase
+let query_time = Instant::now();
 //iterate over indices in query vector
 for query_index in query_indices.iter() {
     //for each query index go over all the fri layers,
@@ -121,5 +127,7 @@ for query_index in query_indices.iter() {
         friproof.query_proofs.push(vec![index_proof,index_sym_proof]);
     }
     }
+info!("prove: query phase {:?}",query_time.elapsed());
+drop(frilayerdata);
 friproof
 }
