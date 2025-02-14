@@ -92,3 +92,5 @@ go.work.sum
 /cuda_backend/icicle
 *.gz
 
+WIP igonore
+/sumcheck_playground/

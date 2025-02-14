@@ -7,7 +7,7 @@ use fri_poc::utils::*;
 use fri_poc::prover::*;
 use std::time::Instant;
 
-//RUST_LOG=info cargo run --release --package fri_poc --example frie2e
+//RUST_LOG=info cargo run --release --package fri_poc --example frie2egpu
 fn main(){
 try_load_and_set_backend_gpu();
     env_logger::init();
