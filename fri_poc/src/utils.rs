@@ -4,7 +4,7 @@ use icicle_core::
     traits::{Arithmetic,FieldImpl,GenerateRandom},
     ntt::{get_root_of_unity, initialize_domain, ntt, NTTConfig, NTTInitDomainConfig,NTTDir, NTTDomain,NTT},
     };
-use icicle_runtime::{memory::HostSlice,Device};
+use icicle_runtime::{memory::HostSlice,Device,runtime};
 use icicle_hash::blake2s::Blake2s;
 
 
@@ -20,7 +20,7 @@ pub fn set_backend_cpu() {
 
 pub fn try_load_and_set_backend_gpu() {
     
-    icicle_runtime::load_backend("../cuda_backend").unwrap();
+    runtime::load_backend("../cuda_backend/icicle/lib/backend").unwrap();
     let device_gpu = Device::new("CUDA", 0);
     let is_cuda_device_available = icicle_runtime::is_device_available(&device_gpu);
     if is_cuda_device_available {
