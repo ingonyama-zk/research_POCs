@@ -5,8 +5,7 @@
 * M1
 
 ```rust 
-Sumcheck_bench/sumcheck_prover
-                        time:   [2.3475 s 2.3510 s 2.3548 s] 
+[2025-02-16T21:42:06Z INFO  prover_runtime] Prover time 2.367392958s
 ```
 
 * CPU (Sweden)
