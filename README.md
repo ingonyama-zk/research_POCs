@@ -1,18 +1,9 @@
-# Polynomial-API
+# POC repository for research experiments : Karthik
 
-## RUST
+## basic
 
-In V3
+* naive experiments, measurements etc
 
-* run examples
+## FRI POC
 
-```
-cargo run --package rust --example hello_poly 
-
-```
-* run test
-
-```
-
-cargo test --package rust --test test_integration --  --show-output
-```
+* e2e fri POC with cross platform code, Fiat Shamir based on merlin library, no extension field support yet.
