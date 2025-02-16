@@ -90,7 +90,5 @@ go.work.sum
 *.fatbin
 .vscode/settings.json
 /cuda_backend/icicle
+/metal_backend/icicle
 *.gz
-
-WIP igonore
-/sumcheck_playground/
