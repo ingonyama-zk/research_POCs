@@ -1,11 +1,11 @@
 use icicle_core::traits::FieldImpl;
-use icicle_core::sumcheck::{Sumcheck,SumcheckConfig,SumcheckTranscriptConfig,SumcheckProofOps};
+use icicle_core::sumcheck::{Sumcheck,SumcheckConfig,SumcheckTranscriptConfig};
 use icicle_core::program::{PreDefinedProgram, ReturningValueProgram};
-use icicle_bn254::{curve::{ScalarField as Fr}};
+use icicle_bn254::curve::ScalarField as Fr;
 use icicle_hash::blake3::Blake3;
 use icicle_runtime::memory::HostSlice;
 use merlin::Transcript;
-use sumcheck_playground::{transcript::*,utils::*};
+use sumcheck_playground::transcript::*;
 
 pub fn main() {
     let size = 1<<3;
