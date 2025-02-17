@@ -1,0 +1,25 @@
+[package]
+name = "sumcheck_playground"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+icicle-runtime = { git = "https://github.com/ingonyama-zk/icicle.git", tag = "v3.5.0"}
+icicle-core = { git = "https://github.com/ingonyama-zk/icicle.git", tag = "v3.5.0" }
+icicle-bn254 = { git = "https://github.com/ingonyama-zk/icicle.git", tag = "v3.5.0"}
+icicle-hash = { git = "https://github.com/ingonyama-zk/icicle.git", tag = "v3.5.0"}
+
+merlin = {version = "3.0.0"}
+
+
+
+log = "0.4.25"
+env_logger = "0.11.6"
+
+
+[dev-dependencies]
+criterion = "0.5.1"
+
+[[bench]]
+name = "benchmark"
+harness = false
