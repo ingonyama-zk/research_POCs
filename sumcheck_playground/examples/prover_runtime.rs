@@ -1,7 +1,7 @@
 use icicle_bn254::curve::ScalarField as Fr;
 use icicle_core::traits::{FieldImpl,GenerateRandom};
 use icicle_hash::blake3::Blake3;
-use icicle_runtime::memory::HostSlice;
+use icicle_runtime::memory::{DeviceVec, HostSlice, DeviceSlice};
 use icicle_core::sumcheck::{Sumcheck,SumcheckConfig,SumcheckTranscriptConfig,SumcheckProofOps};
 use icicle_core::program::{PreDefinedProgram, ReturningValueProgram};
 use sumcheck_playground::utils::*;
@@ -10,6 +10,8 @@ use std::time::Instant;
 
 
 const SAMPLES: usize = 1<<22;
+const NOF_MLE_POLY: usize = 4;
+const IS_INPUT_ON_DEVICE: bool = false;
 //RUST_LOG=info cargo run --release --package sumcheck_playground --example prover_runtime
 pub fn main(){
 env_logger::init();
@@ -40,7 +42,8 @@ info!("Compute claimed sum time {:?}",compute_sum_time.elapsed());
     let hasher = Blake3::new(leaf_size).unwrap();
 
     //define sumcheck config
-    let sumcheck_config = SumcheckConfig::default();
+    let mut sumcheck_config = SumcheckConfig::default();
+    sumcheck_config.are_inputs_on_device = IS_INPUT_ON_DEVICE; 
 
     let mle_poly_hosts = vec![HostSlice::<Fr>::from_slice(&poly_a),
     HostSlice::<Fr>::from_slice(&poly_b),HostSlice::<Fr>::from_slice(&poly_c),HostSlice::<Fr>::from_slice(&poly_e)];
@@ -55,14 +58,44 @@ info!("Compute claimed sum time {:?}",compute_sum_time.elapsed());
             true, 
             seed_rng);
     let combine_function = <icicle_bn254::program::FieldReturningValueProgram as ReturningValueProgram>::new_predefined(PreDefinedProgram::EQtimesABminusC).unwrap();
-let prover_time = Instant::now();
-let _proof= sumcheck.prove(
-        &mle_poly_hosts, 
-        SAMPLES.try_into().unwrap(), 
-        claimed_sum, 
-        combine_function, 
-        &transcript_config, 
-        &sumcheck_config); 
-info!("Prover time {:?}", prover_time.elapsed());
+
+    if sumcheck_config.are_inputs_on_device {
+        let mut device_mle_polys = Vec::with_capacity(NOF_MLE_POLY);
+        for i in 0..NOF_MLE_POLY {
+            let mut device_slice = DeviceVec::device_malloc(SAMPLES).unwrap();
+            device_slice
+                .copy_from_host(mle_poly_hosts[i])
+                .unwrap();
+            device_mle_polys.push(device_slice);
+        }
+    
+        let mle_polys_device: Vec<&DeviceSlice<icicle_bn254::curve::ScalarField>> = device_mle_polys
+            .iter()
+            .map(|s| &s[..])
+            .collect();
+        let device_mle_polys_slice = mle_polys_device.as_slice();
+        let prover_time = Instant::now();
+        let _proof= sumcheck.prove(
+                &device_mle_polys_slice, 
+                SAMPLES.try_into().unwrap(),
+                claimed_sum, 
+                combine_function, 
+                &transcript_config, 
+                &sumcheck_config); 
+        info!("Prover time {:?}", prover_time.elapsed());
+    }
+    else {
+        let prover_time = Instant::now();
+        let _proof= sumcheck.prove(
+                &mle_poly_hosts, 
+                SAMPLES.try_into().unwrap(), 
+                claimed_sum,
+                combine_function, 
+                &transcript_config, 
+                &sumcheck_config); 
+        info!("Prover time {:?}", prover_time.elapsed());
+    }
+
+
 info!("total time {:?}", gen_data_time.elapsed());
 }
