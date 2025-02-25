@@ -2,13 +2,8 @@ use icicle_bn254::curve::ScalarField as Fr;
 use icicle_bn254::sumcheck::SumcheckWrapper;
 use icicle_core::traits::FieldImpl;
 use icicle_hash::blake3::Blake3;
-<<<<<<< HEAD
 use icicle_runtime::memory::{DeviceVec, HostSlice, DeviceSlice};
-use icicle_core::sumcheck::{Sumcheck,SumcheckConfig,SumcheckTranscriptConfig,SumcheckProofOps};
-=======
-use icicle_runtime::memory::HostSlice;
 use icicle_core::sumcheck::{Sumcheck,SumcheckConfig,SumcheckTranscriptConfig};
->>>>>>> origin/main
 use icicle_core::program::{PreDefinedProgram, ReturningValueProgram};
 use merlin::Transcript;
 use sumcheck_playground::transcript::TranscriptProtocol;
@@ -18,10 +13,6 @@ use std::time::Instant;
 
 
 const SAMPLES: usize = 1<<22;
-<<<<<<< HEAD
-const NOF_MLE_POLY: usize = 4;
-const IS_INPUT_ON_DEVICE: bool = false;
-=======
 
 pub fn verify_proof(sumcheck:SumcheckWrapper,proof:icicle_bn254::sumcheck::SumcheckProof,claimed_sum:Fr ) {
     let mut verifier_previous_transcript =  Transcript::new(b"my_sumcheck");
@@ -57,7 +48,8 @@ match proof_validty {
 }
 
 
->>>>>>> origin/main
+const NOF_MLE_POLY: usize = 4;
+const IS_INPUT_ON_DEVICE: bool = false;
 //RUST_LOG=info cargo run --release --package sumcheck_playground --example prover_runtime
 pub fn main(){
 env_logger::init();
@@ -109,7 +101,6 @@ info!("Compute claimed sum time {:?}",compute_sum_time.elapsed());
             true, 
             seed_rng);
     let combine_function = <icicle_bn254::program::FieldReturningValueProgram as ReturningValueProgram>::new_predefined(PreDefinedProgram::EQtimesABminusC).unwrap();
-<<<<<<< HEAD
 
     if sumcheck_config.are_inputs_on_device {
         let mut device_mle_polys = Vec::with_capacity(NOF_MLE_POLY);
@@ -138,7 +129,7 @@ info!("Compute claimed sum time {:?}",compute_sum_time.elapsed());
     }
     else {
         let prover_time = Instant::now();
-        let _proof= sumcheck.prove(
+        let proof= sumcheck.prove(
                 &mle_poly_hosts, 
                 SAMPLES.try_into().unwrap(), 
                 claimed_sum,
@@ -146,22 +137,11 @@ info!("Compute claimed sum time {:?}",compute_sum_time.elapsed());
                 &transcript_config, 
                 &sumcheck_config); 
         info!("Prover time {:?}", prover_time.elapsed());
-    }
-
-
-=======
-let prover_time = Instant::now();
-let proof= sumcheck.prove(
-        &mle_poly_hosts, 
-        SAMPLES.try_into().unwrap(), 
-        claimed_sum, 
-        combine_function, 
-        &transcript_config, 
-        &sumcheck_config); 
-info!("Prover time {:?}", prover_time.elapsed());
 let verify_time = Instant::now();
 verify_proof(sumcheck,proof, claimed_sum);
 info!("verify time {:?}", verify_time.elapsed());
->>>>>>> origin/main
+    }
+
+
 info!("total time {:?}", gen_data_time.elapsed());
 }
