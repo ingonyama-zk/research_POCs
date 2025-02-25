@@ -1,5 +1,5 @@
-use icicle_runtime::{memory::HostSlice,Device,runtime};
-use icicle_core::traits::{Arithmetic,FieldImpl,GenerateRandom};
+use icicle_runtime::{Device,runtime};
+use icicle_core::traits::{FieldImpl,GenerateRandom};
 
 pub fn set_backend_cpu() {
     
