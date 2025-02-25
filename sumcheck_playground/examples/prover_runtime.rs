@@ -1,6 +1,7 @@
 use icicle_bn254::curve::ScalarField as Fr;
 use icicle_core::traits::{FieldImpl,GenerateRandom};
 use icicle_hash::blake3::Blake3;
+use icicle_hash::keccak::Keccak256;
 use icicle_runtime::memory::{DeviceVec, HostSlice, DeviceSlice};
 use icicle_core::sumcheck::{Sumcheck,SumcheckConfig,SumcheckTranscriptConfig,SumcheckProofOps};
 use icicle_core::program::{PreDefinedProgram, ReturningValueProgram};
@@ -11,12 +12,12 @@ use std::time::Instant;
 
 const SAMPLES: usize = 1<<22;
 const NOF_MLE_POLY: usize = 4;
-const IS_INPUT_ON_DEVICE: bool = false;
+const IS_INPUT_ON_DEVICE: bool = true;
 //RUST_LOG=info cargo run --release --package sumcheck_playground --example prover_runtime
 pub fn main(){
 env_logger::init();
 
-try_load_and_set_backend_gpu();
+try_load_and_set_backend_metal();
 
 let gen_data_time = Instant::now();
 let poly_a = generate_random_vector::<Fr>(SAMPLES);
@@ -39,7 +40,7 @@ info!("Compute claimed sum time {:?}",compute_sum_time.elapsed());
 
 
     let leaf_size = (Fr::one()).to_bytes_le().len().try_into().unwrap();
-    let hasher = Blake3::new(leaf_size).unwrap();
+    let hasher = Keccak256::new(leaf_size).unwrap();
 
     //define sumcheck config
     let mut sumcheck_config = SumcheckConfig::default();
