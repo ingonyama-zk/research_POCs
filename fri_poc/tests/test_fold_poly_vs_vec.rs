@@ -32,6 +32,34 @@ fn fold_poly(
     &e + &(&o*&beta)
 }
 
+fn fold_poly2<P: UnivariatePolynomial>(
+    poly: P,      
+    beta: P::Field, 
+) -> P {
+    let o = poly.odd();  // Get the odd terms
+    let e = poly.even(); // Get the even terms
+    // Perform the fold operation: e + (o * beta)
+    let o_beta = o.mul_by_scalar(&beta);  // o * beta (polynomial * scalar)
+    e.add(&o_beta)  // e + (o * beta) (addition of polynomials)
+}
+#[test]
+pub fn foldpoly1vs2test(){
+    let size: usize = 8;
+    let logsize=3;
+    // this cannot compute cosets
+    init_ntt_domain::<Fr>(1 << logsize);
+    let v = vec![Fr::from_u32(1),Fr::from_u32(2),Fr::from_u32(3),Fr::from_u32(4),Fr::from_u32(5),Fr::from_u32(6),Fr::from_u32(7),Fr::from_u32(8)];
+    let poly = DensePolynomial::from_rou_evals(HostSlice::from_slice(&v), v.len());
+    let gamma = Fr::from_u32(200);
+    let p_fold = fold_poly(poly.clone(), gamma);
+    let p_fold2 = fold_poly2(poly, gamma);
+    let  mut t1 = vec![Fr::zero();  size/2];
+    let  mut t2 = vec![Fr::zero();  size/2];
+    p_fold.copy_coeffs(0, HostSlice::from_mut_slice(t1.as_mut_slice()));
+    p_fold2.copy_coeffs(0, HostSlice::from_mut_slice(t2.as_mut_slice()));
+    println!("p fold evals1 {:?}",t1);
+    println!("p fold evals2 {:?}",t2);
+}
 #[test]
 
 pub fn poly_fold_vector_fold_sanity_no_coset(){
