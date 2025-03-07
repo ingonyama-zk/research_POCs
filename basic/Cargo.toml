@@ -23,5 +23,6 @@ hex = "0.4"
 
 rand = "0.8"
 clap = { version = "<=4.4.12", features = ["derive"] }
+rayon="1.5"
 
 [features]
