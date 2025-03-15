@@ -20,7 +20,7 @@ try_load_and_set_backend_gpu();
         stopping_size: 1,//2^0
     };
 info!("Fri config: {:?}",fri_config);
-let starting_size: usize = 1<<10;
+let starting_size: usize = 1<<8;
 let input_data: Vec<Fr> = generate_random_vector::<Fr>(starting_size);
 let size: usize = input_data.len()*fri_config.blow_up_factor;
 

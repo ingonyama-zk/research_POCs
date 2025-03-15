@@ -1,5 +1,6 @@
 use criterion::{criterion_group, criterion_main, Criterion};
 use icicle_bn254::curve::ScalarField as Fr;
+use icicle_bn254::program::bn254::FieldReturningValueProgram;
 use icicle_core::traits::{FieldImpl,GenerateRandom};
 use icicle_hash::blake3::Blake3;
 use icicle_runtime::memory::HostSlice;
@@ -49,7 +50,7 @@ group.bench_function("sumcheck_prover", |b |b.iter(
             b"round_challenge".to_vec(), 
             true, 
             seed_rng);
-        let combine_function = <icicle_bn254::program::FieldReturningValueProgram as ReturningValueProgram>::new_predefined(PreDefinedProgram::EQtimesABminusC).unwrap();
+        let combine_function = <FieldReturningValueProgram as ReturningValueProgram>::new_predefined(PreDefinedProgram::EQtimesABminusC).unwrap();
        let _proof= sumcheck.prove(
         &mle_poly_hosts, 
         SAMPLES.try_into().unwrap(), 

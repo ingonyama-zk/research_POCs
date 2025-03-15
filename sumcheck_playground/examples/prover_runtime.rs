@@ -100,7 +100,7 @@ info!("Compute claimed sum time {:?}",compute_sum_time.elapsed());
             b"round_challenge".to_vec(), 
             true, 
             seed_rng);
-    let combine_function = <icicle_bn254::program::FieldReturningValueProgram as ReturningValueProgram>::new_predefined(PreDefinedProgram::EQtimesABminusC).unwrap();
+    let combine_function = <icicle_bn254::program::bn254::FieldReturningValueProgram as ReturningValueProgram>::new_predefined(PreDefinedProgram::EQtimesABminusC).unwrap();
 
     if sumcheck_config.are_inputs_on_device {
         let mut device_mle_polys = Vec::with_capacity(NOF_MLE_POLY);

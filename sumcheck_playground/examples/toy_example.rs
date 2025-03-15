@@ -2,6 +2,7 @@ use icicle_core::traits::FieldImpl;
 use icicle_core::sumcheck::{Sumcheck,SumcheckConfig,SumcheckTranscriptConfig};
 use icicle_core::program::{PreDefinedProgram, ReturningValueProgram};
 use icicle_bn254::curve::ScalarField as Fr;
+use icicle_bn254::program::bn254::FieldReturningValueProgram;
 use icicle_hash::blake3::Blake3;
 use icicle_runtime::memory::HostSlice;
 use merlin::Transcript;
@@ -54,7 +55,7 @@ pub fn main() {
     HostSlice::<Fr>::from_slice(&poly_b),HostSlice::<Fr>::from_slice(&poly_c),HostSlice::<Fr>::from_slice(&poly_e)];
 
     // define combine function
-    let combine_function = <icicle_bn254::program::FieldReturningValueProgram as ReturningValueProgram>::new_predefined(PreDefinedProgram::EQtimesABminusC).unwrap();
+    let combine_function = <FieldReturningValueProgram as ReturningValueProgram>::new_predefined(PreDefinedProgram::EQtimesABminusC).unwrap();
     let proof =    sumcheck.prove(
         &mle_poly_hosts, 
         size, 
