@@ -6,10 +6,11 @@ Count only "Prover time" as relevant parameter.
 * M1
 
 ```rust 
-[2025-02-16T21:42:03Z INFO  prover_runtime] Generate e,A,B,C of log size 22, time 825.228125ms
-[2025-02-16T21:42:04Z INFO  prover_runtime] Compute claimed sum time 442.782209ms
-[2025-02-16T21:42:06Z INFO  prover_runtime] Prover time 2.367392958s
-[2025-02-16T21:42:06Z INFO  prover_runtime] total time 3.635556541s
+[2025-03-15T21:19:23Z INFO  prover_runtime] Generate e,A,B,C of log size 22, time 736.827167ms
+[2025-03-15T21:19:23Z INFO  prover_runtime] Compute claimed sum time 441.050375ms
+[2025-03-15T21:19:24Z INFO  prover_runtime] Prover time 475.654958ms
+[2025-03-15T21:19:24Z INFO  prover_runtime] verify time 686µs
+[2025-03-15T21:19:24Z INFO  prover_runtime] total time 1.654625917s
 ```
 
 * CPU (Sweden) No appreciable difference
