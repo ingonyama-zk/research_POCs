@@ -4,10 +4,10 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-icicle-runtime = { git = "https://github.com/ingonyama-zk/icicle.git", tag = "v3.5.0"}
-icicle-core = { git = "https://github.com/ingonyama-zk/icicle.git", tag = "v3.5.0" }
-icicle-bn254 = { git = "https://github.com/ingonyama-zk/icicle.git", tag = "v3.5.0"}
-icicle-hash = { git = "https://github.com/ingonyama-zk/icicle.git", tag = "v3.5.0"}
+icicle-core = { workspace = true }
+icicle-runtime = { workspace = true }
+icicle-hash = { workspace = true }
+icicle-bn254 = { git = "https://github.com/ingonyama-zk/icicle.git", tag = "v3.6.0"}
 
 merlin = {version = "3.0.0"}
 
