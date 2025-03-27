@@ -10,10 +10,13 @@
 
 ## Sumcheck Playground
 
-* Sumcheck API example and measurement.
+* Sumcheck API example and measurement
+* examples with predefined program
+* writing Nova (relaxed r1cs) with program
 
 ## To come
 
-1. STIR (?)
-2. WHIR (?)
-3. Send me your wishlist ":)"
+1. Basefold
+2. STIR 
+3. WHIR 
+4. Send me your wishlist ":)"

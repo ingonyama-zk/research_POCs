@@ -6,12 +6,12 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-icicle-runtime = { git = "https://github.com/ingonyama-zk/icicle.git", tag = "v3.6.0" }
-icicle-core = { git = "https://github.com/ingonyama-zk/icicle.git", tag = "v3.6.0" }
-icicle-babybear = { git = "https://github.com/ingonyama-zk/icicle.git", tag = "v3.6.0"}
+icicle-core = { workspace = true }
+icicle-runtime = { workspace = true }
+icicle-hash = { workspace = true }
 icicle-m31 = { git = "https://github.com/ingonyama-zk/icicle.git", tag = "v3.6.0"}
 icicle-bn254 = { git = "https://github.com/ingonyama-zk/icicle.git", tag = "v3.6.0"}
-icicle-hash = { git = "https://github.com/ingonyama-zk/icicle.git", tag = "v3.6.0"}
+icicle-babybear = { git = "https://github.com/ingonyama-zk/icicle.git", tag = "v3.6.0" }
 hex = "0.4" 
 # icicle-babybear = {path = "../../icicle/wrappers/rust/icicle-fields/icicle-babybear" }
 # icicle-bn254 = {path = "../../icicle/wrappers/rust/icicle-curves/icicle-bn254" }

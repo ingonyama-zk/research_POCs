@@ -5,11 +5,7 @@ use icicle_bn254::{curve::ScalarField as Fr, polynomials::DensePolynomial as pol
 use icicle_core::{
     ntt::{get_root_of_unity, initialize_domain, NTTInitDomainConfig},
     polynomials::UnivariatePolynomial,
-    traits::{FieldImpl, GenerateRandom},
-    ntt::{get_root_of_unity, initialize_domain, NTTInitDomainConfig},
-    polynomials::UnivariatePolynomial,
-    traits::{FieldImpl, GenerateRandom},
-};
+    traits::{FieldImpl, GenerateRandom}};
 use icicle_runtime::memory::HostSlice;
 use icicle_runtime::{self, Device};
 
