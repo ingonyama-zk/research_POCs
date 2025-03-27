@@ -1,0 +1,17 @@
+[workspace]
+members = [
+    "basic",
+    "fri_poc",
+    "sumcheck_playground"
+]
+
+resolver = "2"
+
+[workspace.dependencies]
+icicle-runtime = { git = "https://github.com/ingonyama-zk/icicle.git", tag = "v3.6.0" }
+icicle-core = { git = "https://github.com/ingonyama-zk/icicle.git", tag = "v3.6.0" }
+icicle-hash = { git = "https://github.com/ingonyama-zk/icicle.git",tag = "v3.6.0"}
+#local
+# icicle-core = {path = "../../icicle/wrappers/rust/icicle-core" }
+# icicle-runtime = {path = "../../icicle/wrappers/rust/icicle-runtime" }
+# icicle-hash = {path = "../../icicle/wrappers/rust/icicle-hash" }

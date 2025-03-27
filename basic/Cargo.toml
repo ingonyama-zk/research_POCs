@@ -1,5 +1,5 @@
 [package]
-name = "rust"
+name = "basic"
 version = "0.1.0"
 edition = "2021"
 
@@ -13,14 +13,13 @@ icicle-m31 = { git = "https://github.com/ingonyama-zk/icicle.git", tag = "v3.6.0
 icicle-bn254 = { git = "https://github.com/ingonyama-zk/icicle.git", tag = "v3.6.0"}
 icicle-hash = { git = "https://github.com/ingonyama-zk/icicle.git", tag = "v3.6.0"}
 hex = "0.4" 
-# icicle-core = {path = "../../icicle/wrappers/rust/icicle-core" }
-# icicle-runtime = {path = "../../icicle/wrappers/rust/icicle-runtime" }
-# icicle-hash = {path = "../../icicle/wrappers/rust/icicle-hash" }
 # icicle-babybear = {path = "../../icicle/wrappers/rust/icicle-fields/icicle-babybear" }
-# icicle-bn254 = {path = "../../icicle/wrappers/rust/icicle-fields/icicle-bn254" }
+# icicle-bn254 = {path = "../../icicle/wrappers/rust/icicle-curves/icicle-bn254" }
+# icicle-m31 = {path = "../../icicle/wrappers/rust/icicle-fields/icicle-m31" }
 
 
 rand = "0.8"
 clap = { version = "<=4.4.12", features = ["derive"] }
+rayon="1.5"
 
 [features]
