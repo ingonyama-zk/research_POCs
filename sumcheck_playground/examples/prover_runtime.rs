@@ -139,7 +139,7 @@ pub fn main() {
         let device_mle_polys_slice = mle_polys_device.as_slice();
         let prover_time = Instant::now();
         let _proof = sumcheck.prove(
-            &device_mle_polys_slice,
+            device_mle_polys_slice,
             SAMPLES.try_into().unwrap(),
             claimed_sum,
             combine_function,

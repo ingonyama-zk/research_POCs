@@ -9,7 +9,7 @@ use icicle_core::{
     vec_ops::*,
 };
 use icicle_hash::blake2s::Blake2s;
-use icicle_runtime::memory::HostSlice;
+use icicle_runtime::memory::{HostOrDeviceSlice, HostSlice};
 use rand::distr::uniform::UniformSampler;
 
 #[derive(Clone, Copy, Debug)]
@@ -31,10 +31,16 @@ pub struct Friconfig {
 //     pub arity: usize,
 //     pub merkle_conf: MerkleTreeConfig,
 // }
-pub struct Friproof<F: FieldImpl> {
+pub struct Friproof<T> {
     pub query_proofs: Vec<Vec<MerkleProof>>, // contains path, root, leaf.
-    pub final_poly: Vec<F>,
+    pub final_poly: Vec<T>,
     pub pow_nonce: u64,
+}
+
+impl<F: FieldImpl> Default for Friproof<F> {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl<F: FieldImpl> Friproof<F> {
@@ -47,9 +53,15 @@ impl<F: FieldImpl> Friproof<F> {
     }
 }
 
-pub struct Frilayerdata<F: FieldImpl> {
-    pub layer_code_words: Vec<Vec<F>>,
+pub struct Frilayerdata<T> {
+    pub layer_code_words: Vec<Vec<T>>,
     pub layer_trees: Vec<MerkleTree>,
+}
+
+impl<F: FieldImpl> Default for Frilayerdata<F> {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl<F: FieldImpl> Frilayerdata<F> {
@@ -63,8 +75,19 @@ impl<F: FieldImpl> Frilayerdata<F> {
         self.layer_code_words.len()
     }
 }
-pub struct Current_layer<F: FieldImpl> {
-    pub current_code_word: Vec<F>,
+
+pub struct Current_layer<T> {
+    pub current_code_word: Vec<T>,
+}
+
+impl<F> Default for Current_layer<F>
+where
+    F: FieldImpl + Arithmetic,
+    F::Config: VecOps<F> + NTTDomain<F>,
+{
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl<F> Current_layer<F>
