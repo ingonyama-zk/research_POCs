@@ -6,6 +6,9 @@ use icicle_core::{
     ntt::{get_root_of_unity, initialize_domain, NTTInitDomainConfig},
     polynomials::UnivariatePolynomial,
     traits::{FieldImpl, GenerateRandom},
+    ntt::{get_root_of_unity, initialize_domain, NTTInitDomainConfig},
+    polynomials::UnivariatePolynomial,
+    traits::{FieldImpl, GenerateRandom},
 };
 use icicle_runtime::memory::HostSlice;
 use icicle_runtime::{self, Device};
@@ -51,6 +54,10 @@ fn main() {
     let device_cpu = Device::new("CPU", 0);
     let mut device_gpu = Device::new("CUDA", 0);
     let is_cuda_device_available = icicle_runtime::is_device_available(&device_gpu);
+    // Check if GPU is available
+    let device_cpu = Device::new("CPU", 0);
+    let mut device_gpu = Device::new("CUDA", 0);
+    let is_cuda_device_available = icicle_runtime::is_device_available(&device_gpu);
 
     if is_cuda_device_available {
         println!("GPU is available");
@@ -68,14 +75,30 @@ fn main() {
     // let device = icicle_runtime::Device::new(&args.device_type, 0 /* =device_id*/);
     icicle_runtime::set_device(&device_gpu).unwrap();
     init_ntt_domain(1 << logsize);
+    let size: usize = 1024;
+    println!("Polynomial log_degree size: {:?}", 10);
+    println!("Identity checking: (p1+p2)^2+(p1-p2)^2 =? 2 (p_1^2+p_2^2)");
+    println!("Identity checking: (p1+p2)^2-(p1-p2)^2 =? 4 p_1.p_2");
+    let logsize = 14;
+    println!("max_domain size needed: {:?}", logsize);
+    // let device = icicle_runtime::Device::new(&args.device_type, 0 /* =device_id*/);
+    icicle_runtime::set_device(&device_gpu).unwrap();
+    init_ntt_domain(1 << logsize);
 
+    let size: usize = 1024;
     let size: usize = 1024;
 
     let two = Fr::from_u32(2);
     let one = Fr::from_u32(1);
     let four = Fr::from_u32(4);
     let alpha = Fr::from_u32(random::<u32>());
+    let two = Fr::from_u32(2);
+    let one = Fr::from_u32(1);
+    let four = Fr::from_u32(4);
+    let alpha = Fr::from_u32(random::<u32>());
 
+    let v1 = <Fr as FieldImpl>::Config::generate_random(size);
+    let v2 = <Fr as FieldImpl>::Config::generate_random(size);
     let v1 = <Fr as FieldImpl>::Config::generate_random(size);
     let v2 = <Fr as FieldImpl>::Config::generate_random(size);
 
@@ -125,3 +148,4 @@ fn main() {
         t2_r_one, a4
     );
 }
+
