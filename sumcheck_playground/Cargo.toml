@@ -12,11 +12,14 @@ icicle-bn254 = { git = "https://github.com/ingonyama-zk/icicle.git", tag = "v3.6
 merlin = {version = "3.0.0"}
 
 
-
+sha3 = "0.10.8"
+# ark-ec = { version = "0.4.0" }
 log = "0.4.25"
 env_logger = "0.11.6"
-
-
+# ark-serialize = { version = "0.4.2", default-features = false, features = [
+#     "derive",
+# ] }
+# jolt-core = {git = "https://github.com/a16z/jolt.git", branch = "main"}
 [dev-dependencies]
 criterion = "0.5.1"
 
