@@ -105,15 +105,19 @@ assert_eq!(r0[0]+r0[1],claimed_sum, "Claimed sum mismatch");// this passes of co
 //entry_DS = [domain_separator_label || proof.mle_polynomial_size || proof.degree || public (hardcoded?) ||
 //claimed_sum]
 //alpha_0 = Hash(entry_DS || seed_rng || round_challenge_label || entry_0).to_field()
+
+//config data
 let mut hash_input_0: Vec<u8> =transcript_config.domain_separator_label.clone();
 hash_input_0.append(mle_poly_size.to_le_bytes().to_vec().as_mut());//ok
 hash_input_0.append(nof_mle_poly.to_le_bytes().to_vec().as_mut());//ok combine degree
 hash_input_0.append(claimed_sum.to_bytes_le().to_vec().as_mut());
-
+//challenge prev data
 hash_input_0.append(seed_rng.to_bytes_le().to_vec().as_mut());
+//challenge meta data
 hash_input_0.append(&mut transcript_config.round_challenge_label);
-
+//meta data of actual data
 hash_input_0.append(&mut transcript_config.round_poly_label);
+//actual data
 hash_input_0.append(r0.len().to_le_bytes().to_vec().as_mut());
 hash_input_0.append(0u32.to_le_bytes().to_vec().as_mut());
 hash_input_0.append(r0[0].to_bytes_le().to_vec().as_mut());
