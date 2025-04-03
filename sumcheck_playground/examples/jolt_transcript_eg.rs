@@ -1,3 +1,5 @@
+use core::hash;
+
 use icicle_hash::keccak::Keccak256;
 use icicle_core::hash::{Hasher, HashConfig};
 use icicle_core::traits::{FieldImpl, GenerateRandom};
@@ -24,10 +26,10 @@ fn check_icicle_vs_jolt_hash(){
 
 fn icicle_transcript(){
 
-let log_mle_poly_size: u32 = 3;
-let mle_poly_size: u32 = 1 << log_mle_poly_size;
+let log_mle_poly_size: u64 = 3;
+let mle_poly_size: u64 = 1 << log_mle_poly_size;
  //number of MLE polys
- let nof_mle_poly: u32 = 1;
+ let nof_mle_poly: u64 = 1;
   let poly_a = vec![
     <<SW as Sumcheck>::Field as FieldImpl>::from_u32(1),
     <<SW as Sumcheck>::Field as FieldImpl>::from_u32(4),
@@ -53,11 +55,11 @@ let mle_poly_size: u32 = 1 << log_mle_poly_size;
 //define transcript config
  let hasher = Keccak256::new(0).unwrap();
  let seed_rng =<<SW as Sumcheck>::Field as FieldImpl>::zero();
- let transcript_config = SumcheckTranscriptConfig::from_string_labels(
+ let mut transcript_config = SumcheckTranscriptConfig::from_string_labels(
      &hasher,
-     "",
+     "new",
      "begin_append_vector",
-     "",
+     "challenge",
      true, // little endian
      seed_rng,
  );
@@ -91,53 +93,87 @@ proof.print();
      proof_validty.unwrap()); 
 
 
-let proof_round_polys_jolt = proof_round_polys.clone();
+let r0 = proof_round_polys[0].clone();
+let r1 = proof_round_polys[1].clone();
+let r2 = proof_round_polys[2].clone();
 let poly_a_jolt = poly_a.clone();
 
 let one = Fr::one();
-assert_eq!(proof_round_polys_jolt[0][0]+proof_round_polys_jolt[0][1],claimed_sum, "Claimed sum mismatch");
+assert_eq!(r0[0]+r0[1],claimed_sum, "Claimed sum mismatch");// this passes of course
 
-let mut entry0: Vec<u8> =vec![];
-entry0.append(b"begin_append_vector".to_vec().as_mut());
-entry0.append(proof_round_polys_jolt[0].len().to_le_bytes().to_vec().as_mut());
-entry0.append(0u32.to_le_bytes().to_vec().as_mut());
-entry0.append(proof_round_polys_jolt[0][0].to_bytes_le().to_vec().as_mut());
-entry0.append(proof_round_polys_jolt[0][1].to_bytes_le().to_vec().as_mut());
-// append entry_DS = [domain_separator_label || proof.mle_polynomial_size || proof.degree || public (hardcoded?) ||
-// claimed_sum]
-//entry_0 = [entryDS|| round_poly_label || r_0[x].len() || k=0 || r_0[x]]
-//in the first round hash all meta data and round poly data in one go, it saves multiple hash invocations.
-let mut jolt_transcript = KeccakTranscript::new(b"new",mle_poly_size.try_into().unwrap(), nof_mle_poly.try_into().unwrap(), claimed_sum,seed_rng,entry0);
-println!("jolt transcript initial state{:?}", jolt_transcript.state);
-//get alpha 0
-let alpha0 = jolt_transcript.challenge_scalar::<Fr>();
-println!("alpha0: {:?}", alpha0);
 //icicle transcript
-// append entry_DS = [domain_separator_label || proof.mle_polynomial_size || proof.degree || public (hardcoded?) ||
+//entry_DS = [domain_separator_label || proof.mle_polynomial_size || proof.degree || public (hardcoded?) ||
 // claimed_sum]
-let mut ds: Vec<u8> =b"new".to_vec();
-ds.append(mle_poly_size.to_le_bytes().to_vec().as_mut());
-ds.append(nof_mle_poly.to_le_bytes().to_vec().as_mut());
-ds.append(claimed_sum.to_bytes_le().to_vec().as_mut());
-ds.append(seed_rng.to_bytes_le().to_vec().as_mut());
+let mut entryds: Vec<u8> =transcript_config.domain_separator_label;
+entryds.append(mle_poly_size.to_le_bytes().to_vec().as_mut());
+entryds.append(nof_mle_poly.to_le_bytes().to_vec().as_mut());
+entryds.append(claimed_sum.to_bytes_le().to_vec().as_mut());
 // build entry_0 = [entryDS|| round_poly_label || r_0[x].len() || k=0 || r_0[x]]
-ds.append(b"begin_append_vector".to_vec().as_mut());
-ds.append(proof_round_polys_jolt[0].len().to_le_bytes().to_vec().as_mut());
-ds.append(0u32.to_le_bytes().to_vec().as_mut());
-ds.append(proof_round_polys_jolt[0][0].to_bytes_le().to_vec().as_mut());
-ds.append(proof_round_polys_jolt[0][1].to_bytes_le().to_vec().as_mut());
+let mut entry0: Vec<u8>=vec![];
+entry0.append(entryds.clone().as_mut());
+entry0.append(&mut transcript_config.round_poly_label);
+entry0.append(r0.len().to_le_bytes().to_vec().as_mut());
+entry0.append(0u32.to_le_bytes().to_vec().as_mut());
+entry0.append(r0[0].to_bytes_le().to_vec().as_mut());
+entry0.append(r0[1].to_bytes_le().to_vec().as_mut());
+//alpha_0 = Hash(entry_DS || seed_rng || round_challenge_label || entry_0).to_field()
+let mut hash_input0 :Vec<u8> = vec![];
+hash_input0.append(entryds.as_mut());
+hash_input0.append(seed_rng.to_bytes_le().to_vec().as_mut());
+hash_input0.append(&mut transcript_config.round_challenge_label);
+hash_input0.append(entry0.as_mut());
 
 let mut output = vec![0u8; 32];
 let hasher_icicle = Keccak256::new(0).unwrap();
-hasher_icicle.hash(HostSlice::from_slice(&ds), &HashConfig::default(), HostSlice::from_mut_slice(&mut output)).unwrap();
+hasher_icicle.hash(HostSlice::from_slice(&hash_input0), &HashConfig::default(), HostSlice::from_mut_slice(&mut output)).unwrap();
 println!("icicle transcript initial state {:?}", output);
 let alpha0icicle = Fr::from_bytes_le(&output);
 println!("alpha0 ICICLE: {:?}", alpha0icicle);
+//entry_i = [round_poly_label || r_i[x].len() || k=i || r_i[x]]
+//alpha_i = Hash(entry_0 || alpha_(i-1) || round_challenge_label || entry_i).to_field()
+let mut entry1: Vec<u8>=vec![];
+entry1.append(&mut transcript_config.round_poly_label);
+entry1.append(r1.len().to_le_bytes().to_vec().as_mut());
+entry1.append(1u32.to_le_bytes().to_vec().as_mut());
+entry1.append(r1[0].to_bytes_le().to_vec().as_mut());
+entry1.append(r1[1].to_bytes_le().to_vec().as_mut());
+
+let mut hash_input1 :Vec<u8> = vec![];
+hash_input1.append(entry0.as_mut());
+hash_input1.append(alpha0icicle.to_bytes_le().to_vec().as_mut());
+hash_input1.append(&mut transcript_config.round_challenge_label);
+hash_input1.append(entry1.as_mut());
 
 
-assert_eq!(proof_round_polys_jolt[1][0]+proof_round_polys_jolt[1][1],
-    proof_round_polys_jolt[0][0]+ (proof_round_polys_jolt[0][1]-proof_round_polys_jolt[0][0])*alpha0icicle, "First round poly mismatch");
+let mut output = vec![0u8; 32];
+let hasher_icicle = Keccak256::new(0).unwrap();
+hasher_icicle.hash(HostSlice::from_slice(&hash_input1), &HashConfig::default(), HostSlice::from_mut_slice(&mut output)).unwrap();
+let alpha1icicle = Fr::from_bytes_le(&output);
+println!("alpha1 ICICLE: {:?}", alpha1icicle);
 
+
+
+assert_eq!(r0[0], poly_a[0]+poly_a[2]+poly_a[4]+poly_a[6], "rp 0 mismatch");
+assert_eq!(r0[1], poly_a[1]+poly_a[3]+poly_a[5]+poly_a[7], "rp 0 mismatch");
+
+// a(1-x) +b x = a + (b-a)x
+let r0poly= vec![r0[0],r0[1]-r0[0]]; 
+let r1poly= vec![r1[0],r1[1]-r1[0]]; 
+let r2poly= vec![r2[0],r2[1]-r2[0]]; 
+
+assert_eq!(r1poly[0]+r1poly[1],r0poly[0]+r0poly[1]*alpha0icicle, "r1poly mismatch");
+
+    // let mut entry0: Vec<u8> =vec![];
+    // entry0.append(b"begin_append_vector".to_vec().as_mut());
+    // entry0.append(proof_round_polys_jolt[0].len().to_le_bytes().to_vec().as_mut());
+    // entry0.append(0u32.to_le_bytes().to_vec().as_mut());
+    // entry0.append(proof_round_polys_jolt[0][0].to_bytes_le().to_vec().as_mut());
+    // entry0.append(proof_round_polys_jolt[0][1].to_bytes_le().to_vec().as_mut());
+// let mut jolt_transcript = KeccakTranscript::new(b"new",mle_poly_size.try_into().unwrap(), nof_mle_poly.try_into().unwrap(), claimed_sum,seed_rng,entry0);
+// println!("jolt transcript initial state{:?}", jolt_transcript.state);
+// //get alpha 0
+// let alpha0 = jolt_transcript.challenge_scalar::<Fr>();
+// println!("alpha0: {:?}", alpha0);
 }
 
 
