@@ -26,10 +26,10 @@ fn check_icicle_vs_jolt_hash(){
 
 fn icicle_transcript(){
 
-let log_mle_poly_size: u64 = 3;
-let mle_poly_size: u64 = 1 << log_mle_poly_size;
+let log_mle_poly_size: u32 = 3;
+let mle_poly_size: u32 = 1 << log_mle_poly_size;
  //number of MLE polys
- let nof_mle_poly: u64 = 1;
+ let nof_mle_poly: u32 = 1;
   let poly_a = vec![
     <<SW as Sumcheck>::Field as FieldImpl>::from_u32(1),
     <<SW as Sumcheck>::Field as FieldImpl>::from_u32(4),
@@ -96,60 +96,81 @@ proof.print();
 let r0 = proof_round_polys[0].clone();
 let r1 = proof_round_polys[1].clone();
 let r2 = proof_round_polys[2].clone();
-let poly_a_jolt = poly_a.clone();
+let poly_evals = poly_a.clone();
 
 let one = Fr::one();
-assert_eq!(r0[0]+r0[1],claimed_sum, "Claimed sum mismatch");// this passes of course
+assert_eq!(r0[0]+r0[1],claimed_sum, "Claimed sum mismatch");// this passes of course, so the proof is in the correct order.
 
 //icicle transcript
 //entry_DS = [domain_separator_label || proof.mle_polynomial_size || proof.degree || public (hardcoded?) ||
-// claimed_sum]
-let mut entryds: Vec<u8> =transcript_config.domain_separator_label;
-entryds.append(mle_poly_size.to_le_bytes().to_vec().as_mut());
-entryds.append(nof_mle_poly.to_le_bytes().to_vec().as_mut());
-entryds.append(claimed_sum.to_bytes_le().to_vec().as_mut());
-// build entry_0 = [entryDS|| round_poly_label || r_0[x].len() || k=0 || r_0[x]]
-let mut entry0: Vec<u8>=vec![];
-entry0.append(entryds.clone().as_mut());
-entry0.append(&mut transcript_config.round_poly_label);
-entry0.append(r0.len().to_le_bytes().to_vec().as_mut());
-entry0.append(0u32.to_le_bytes().to_vec().as_mut());
-entry0.append(r0[0].to_bytes_le().to_vec().as_mut());
-entry0.append(r0[1].to_bytes_le().to_vec().as_mut());
+//claimed_sum]
 //alpha_0 = Hash(entry_DS || seed_rng || round_challenge_label || entry_0).to_field()
-let mut hash_input0 :Vec<u8> = vec![];
-hash_input0.append(entryds.as_mut());
-hash_input0.append(seed_rng.to_bytes_le().to_vec().as_mut());
-hash_input0.append(&mut transcript_config.round_challenge_label);
-hash_input0.append(entry0.as_mut());
+let mut hash_input_0: Vec<u8> =transcript_config.domain_separator_label.clone();
+hash_input_0.append(mle_poly_size.to_le_bytes().to_vec().as_mut());//ok
+hash_input_0.append(nof_mle_poly.to_le_bytes().to_vec().as_mut());//ok combine degree
+hash_input_0.append(claimed_sum.to_bytes_le().to_vec().as_mut());
+
+hash_input_0.append(seed_rng.to_bytes_le().to_vec().as_mut());
+hash_input_0.append(&mut transcript_config.round_challenge_label);
+
+hash_input_0.append(&mut transcript_config.round_poly_label);
+hash_input_0.append(r0.len().to_le_bytes().to_vec().as_mut());
+hash_input_0.append(0u32.to_le_bytes().to_vec().as_mut());
+hash_input_0.append(r0[0].to_bytes_le().to_vec().as_mut());
+hash_input_0.append(r0[1].to_bytes_le().to_vec().as_mut());
+
+
 
 let mut output = vec![0u8; 32];
 let hasher_icicle = Keccak256::new(0).unwrap();
-hasher_icicle.hash(HostSlice::from_slice(&hash_input0), &HashConfig::default(), HostSlice::from_mut_slice(&mut output)).unwrap();
+hasher_icicle.hash(HostSlice::from_slice(&hash_input_0), &HashConfig::default(), HostSlice::from_mut_slice(&mut output)).unwrap();
 println!("icicle transcript initial state {:?}", output);
 let alpha0icicle = Fr::from_bytes_le(&output);
 println!("alpha0 ICICLE: {:?}", alpha0icicle);
-//entry_i = [round_poly_label || r_i[x].len() || k=i || r_i[x]]
-//alpha_i = Hash(entry_0 || alpha_(i-1) || round_challenge_label || entry_i).to_field()
-let mut entry1: Vec<u8>=vec![];
-entry1.append(&mut transcript_config.round_poly_label);
-entry1.append(r1.len().to_le_bytes().to_vec().as_mut());
-entry1.append(1u32.to_le_bytes().to_vec().as_mut());
-entry1.append(r1[0].to_bytes_le().to_vec().as_mut());
-entry1.append(r1[1].to_bytes_le().to_vec().as_mut());
 
-let mut hash_input1 :Vec<u8> = vec![];
-hash_input1.append(entry0.as_mut());
-hash_input1.append(alpha0icicle.to_bytes_le().to_vec().as_mut());
-hash_input1.append(&mut transcript_config.round_challenge_label);
-hash_input1.append(entry1.as_mut());
+// //entry_i = [round_poly_label || r_i[x].len() || k=i || r_i[x]]
+// //alpha_i = Hash(entry_0 || alpha_(i-1) || round_challenge_label || entry_i).to_field()
+// let mut entry1: Vec<u8>=vec![];
+// entry1.append(&mut transcript_config.round_poly_label);
+// entry1.append(r1.len().to_le_bytes().to_vec().as_mut());
+// entry1.append(1u32.to_le_bytes().to_vec().as_mut());
+// entry1.append(r1[0].to_bytes_le().to_vec().as_mut());
+// entry1.append(r1[1].to_bytes_le().to_vec().as_mut());
+
+// let mut hash_input1 :Vec<u8> = vec![];
+// hash_input1.append(entry0.as_mut());
+// hash_input1.append(alpha0icicle.to_bytes_le().to_vec().as_mut());
+// hash_input1.append(&mut transcript_config.round_challenge_label);
+// hash_input1.append(entry1.as_mut());
 
 
-let mut output = vec![0u8; 32];
-let hasher_icicle = Keccak256::new(0).unwrap();
-hasher_icicle.hash(HostSlice::from_slice(&hash_input1), &HashConfig::default(), HostSlice::from_mut_slice(&mut output)).unwrap();
-let alpha1icicle = Fr::from_bytes_le(&output);
-println!("alpha1 ICICLE: {:?}", alpha1icicle);
+// let mut output = vec![0u8; 32];
+// let hasher_icicle = Keccak256::new(0).unwrap();
+// hasher_icicle.hash(HostSlice::from_slice(&hash_input1), &HashConfig::default(), HostSlice::from_mut_slice(&mut output)).unwrap();
+// let alpha1icicle = Fr::from_bytes_le(&output);
+// println!("alpha1 ICICLE: {:?}", alpha1icicle);
+
+// //entry_i = [round_poly_label || r_i[x].len() || k=i || r_i[x]]
+// //alpha_i = Hash(entry_0 || alpha_(i-1) || round_challenge_label || entry_i).to_field()
+// let mut entry2: Vec<u8>=vec![];
+// entry2.append(&mut transcript_config.round_poly_label);
+// entry2.append(r2.len().to_le_bytes().to_vec().as_mut());
+// entry2.append(2u32.to_le_bytes().to_vec().as_mut());
+// entry2.append(r2[0].to_bytes_le().to_vec().as_mut());
+// entry2.append(r2[1].to_bytes_le().to_vec().as_mut());
+
+// let mut hash_input2 :Vec<u8> = vec![];
+// hash_input2.append(entry0.as_mut());
+// hash_input2.append(alpha1icicle.to_bytes_le().to_vec().as_mut());
+// hash_input2.append(&mut transcript_config.round_challenge_label);
+// hash_input2.append(entry2.as_mut());
+
+
+// let mut output = vec![0u8; 32];
+// let hasher_icicle = Keccak256::new(0).unwrap();
+// hasher_icicle.hash(HostSlice::from_slice(&hash_input2), &HashConfig::default(), HostSlice::from_mut_slice(&mut output)).unwrap();
+// let alpha2icicle = Fr::from_bytes_le(&output);
+// println!("alpha1 ICICLE: {:?}", alpha2icicle);
 
 
 
@@ -161,7 +182,12 @@ let r0poly= vec![r0[0],r0[1]-r0[0]];
 let r1poly= vec![r1[0],r1[1]-r1[0]]; 
 let r2poly= vec![r2[0],r2[1]-r2[0]]; 
 
-assert_eq!(r1poly[0]+r1poly[1],r0poly[0]+r0poly[1]*alpha0icicle, "r1poly mismatch");
+//r1[0]+r1[1] = r0[alpha0] = r0poly[0] + alpha0 * ropoly[1]
+assert_eq!(r1poly[0]+r1poly[1],r0poly[0]+r0poly[1]*alpha0icicle, "r1 mismatch");
+//r2[0]+r2[1] = r1[alpha0] = r1poly[0] + alpha1 * r1poly[1]
+// assert_eq!(r2poly[0]+r2poly[1],r1poly[0]+r1poly[1]*alpha1icicle, "r2 mismatch");
+
+
 
     // let mut entry0: Vec<u8> =vec![];
     // entry0.append(b"begin_append_vector".to_vec().as_mut());
