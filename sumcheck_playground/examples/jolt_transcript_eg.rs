@@ -93,20 +93,34 @@ proof.print();
      proof_validty.unwrap()); 
 
 
+
+
+//Simulate verifier explicit
+
+
 let r0 = proof_round_polys[0].clone();
 let r1 = proof_round_polys[1].clone();
 let r2 = proof_round_polys[2].clone();
 let poly_evals = poly_a.clone();
 
-let one = Fr::one();
+assert_eq!(r0[0], poly_a[0]+poly_a[2]+poly_a[4]+poly_a[6], "rp 0 mismatch");
+assert_eq!(r0[1], poly_a[1]+poly_a[3]+poly_a[5]+poly_a[7], "rp 0 mismatch");
+
+// a(1-x) +b x = a + (b-a)x
+let r0poly= vec![r0[0],r0[1]-r0[0]]; 
+let r1poly= vec![r1[0],r1[1]-r1[0]]; 
+let r2poly= vec![r2[0],r2[1]-r2[0]]; 
+
+//basic check
 assert_eq!(r0[0]+r0[1],claimed_sum, "Claimed sum mismatch");// this passes of course, so the proof is in the correct order.
+
 
 //icicle transcript
 //entry_DS = [domain_separator_label || proof.mle_polynomial_size || proof.degree || public (hardcoded?) ||
 //claimed_sum]
 //alpha_0 = Hash(entry_DS || seed_rng || round_challenge_label || entry_0).to_field()
-
 //config data
+//generate alpha0
 let mut hash_input_0: Vec<u8> =transcript_config.domain_separator_label.clone();
 hash_input_0.append(mle_poly_size.to_le_bytes().to_vec().as_mut());//ok
 hash_input_0.append(nof_mle_poly.to_le_bytes().to_vec().as_mut());//ok combine degree
@@ -124,13 +138,15 @@ hash_input_0.append(r0[0].to_bytes_le().to_vec().as_mut());
 hash_input_0.append(r0[1].to_bytes_le().to_vec().as_mut());
 
 
-
 let mut output = vec![0u8; 32];
 let hasher_icicle = Keccak256::new(0).unwrap();
 hasher_icicle.hash(HostSlice::from_slice(&hash_input_0), &HashConfig::default(), HostSlice::from_mut_slice(&mut output)).unwrap();
 println!("icicle transcript initial state {:?}", output);
 let alpha0icicle = Fr::from_bytes_le(&output);
 println!("alpha0 ICICLE: {:?}", alpha0icicle);
+
+//r1[0]+r1[1] = r0[alpha0] = r0poly[0] + alpha0 * ropoly[1]
+assert_eq!(r1poly[0]+r1poly[1],r0poly[0]+r0poly[1]*alpha0icicle, "r1 mismatch");
 
 // //entry_i = [round_poly_label || r_i[x].len() || k=i || r_i[x]]
 // //alpha_i = Hash(entry_0 || alpha_(i-1) || round_challenge_label || entry_i).to_field()
@@ -178,16 +194,6 @@ println!("alpha0 ICICLE: {:?}", alpha0icicle);
 
 
 
-assert_eq!(r0[0], poly_a[0]+poly_a[2]+poly_a[4]+poly_a[6], "rp 0 mismatch");
-assert_eq!(r0[1], poly_a[1]+poly_a[3]+poly_a[5]+poly_a[7], "rp 0 mismatch");
-
-// a(1-x) +b x = a + (b-a)x
-let r0poly= vec![r0[0],r0[1]-r0[0]]; 
-let r1poly= vec![r1[0],r1[1]-r1[0]]; 
-let r2poly= vec![r2[0],r2[1]-r2[0]]; 
-
-//r1[0]+r1[1] = r0[alpha0] = r0poly[0] + alpha0 * ropoly[1]
-assert_eq!(r1poly[0]+r1poly[1],r0poly[0]+r0poly[1]*alpha0icicle, "r1 mismatch");
 //r2[0]+r2[1] = r1[alpha0] = r1poly[0] + alpha1 * r1poly[1]
 // assert_eq!(r2poly[0]+r2poly[1],r1poly[0]+r1poly[1]*alpha1icicle, "r2 mismatch");
 
