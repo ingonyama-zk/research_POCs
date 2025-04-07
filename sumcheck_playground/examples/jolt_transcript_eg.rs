@@ -130,19 +130,22 @@ println!("DS||log_poly_size ||deg {:?}",hash_input_0);
 hash_input_0.extend_from_slice(&claimed_sum.to_bytes_le());
 println!("DS||log_poly_size ||deg||claimedsum {:?}",hash_input_0);
 //challenge prev data
-hash_input_0.extend_from_slice(&seed_rng.to_bytes_le());
+hash_input_0.extend_from_slice(&transcript_config.seed_rng.to_bytes_le());
 println!("DS||log_poly_size ||deg||seedrng {:?}",hash_input_0);
 //challenge meta data
 hash_input_0.extend_from_slice(&transcript_config.round_challenge_label);
 println!("DS||log_poly_size ||deg||seedrng||rngch_label {:?}",hash_input_0);
-//meta data of actual data
+
+//meta data of actual data (entry0)
 hash_input_0.extend_from_slice(&transcript_config.round_poly_label);
 println!("DS||log_poly_size ||deg||seedrng||rngch_label||round_poly_label {:?}",hash_input_0);
 //actual data
 hash_input_0.extend_from_slice(&r0.len().to_le_bytes());
 println!("DS||log_poly_size ||deg||seedrng||rngch_label||round_poly_labe||r0len {:?}",hash_input_0);
+//round_index
 hash_input_0.extend_from_slice(&0u32.to_le_bytes());
 println!("DS||log_poly_size ||deg||seedrng||rngch_label||round_poly_labe||r0len||0 {:?}",hash_input_0);
+//round poly
 hash_input_0.extend_from_slice(&r0[0].to_bytes_le());
 println!("DS||log_poly_size ||deg||seedrng||rngch_label||round_poly_labe||r0len||0||r0[0] {:?}",hash_input_0);
 hash_input_0.extend_from_slice(&r0[1].to_bytes_le());
@@ -160,8 +163,8 @@ hasher_icicle.hash(HostSlice::from_slice(&hash_input_0), &HashConfig::default(),
 // println!(": 0x{}", hex_string);
 let alpha0icicle = Fr::from_bytes_le(&output);
 println!("alpha0 ICICLE: {:?}", alpha0icicle);
-//alpha compute = (r1[0]+r1[1] - r0[0])/r0[1]
-println!("computed alpha0 sumncheck {:?}",(r1poly[0]+r1poly[1]-r0poly[0]) * r0poly[1].inv());
+//alpha compute = (r1[0]+r1[1]  = r0poly[alpha] = r0poly[0]+alpha r0poly[1]
+println!("computed alpha0 sumcheck {:?}",(r1poly[0]+r1poly[1]-r0poly[0]) * r0poly[1].inv());
 //r1[0]+r1[1] = r0[alpha0] = r0poly[0] + alpha0 * ropoly[1]
 assert_eq!(r1poly[0]+r1poly[1],r0poly[0]+r0poly[1]*alpha0icicle, "r1 mismatch");
 
