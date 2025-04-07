@@ -1,10 +1,9 @@
-use core::hash;
-
 use icicle_hash::keccak::Keccak256;
 use icicle_core::hash::{Hasher, HashConfig};
-use icicle_core::traits::{FieldImpl, GenerateRandom};
+use icicle_core::traits::{Arithmetic, FieldImpl, GenerateRandom};
 use icicle_runtime::memory::HostSlice;
 use sha3::{Digest, Keccak256 as gen_Keccak256, Shake128Reader};
+use hex;
 use sumcheck_playground::jolt_transcript::*;
 use icicle_bn254::sumcheck::SumcheckWrapper as SW;
 use icicle_bn254::curve::ScalarField as Fr;
@@ -49,6 +48,7 @@ let mle_poly_size: u32 = 1 << log_mle_poly_size;
      let a = vars[0]; // Shallow copies pointing to the same memory in the backend
      return a;
  };
+ 
  //create polynomial host slices
  let host_a  = HostSlice::<<SW as Sumcheck>::Field>::from_slice(&poly_a);
 
@@ -122,29 +122,46 @@ assert_eq!(r0[0]+r0[1],claimed_sum, "Claimed sum mismatch");// this passes of co
 //config data
 //generate alpha0
 let mut hash_input_0: Vec<u8> =transcript_config.domain_separator_label.clone();
-hash_input_0.append(mle_poly_size.to_le_bytes().to_vec().as_mut());//ok
-hash_input_0.append(nof_mle_poly.to_le_bytes().to_vec().as_mut());//ok combine degree
-hash_input_0.append(claimed_sum.to_bytes_le().to_vec().as_mut());
+println!("DS{:?}",hash_input_0 );
+hash_input_0.extend_from_slice(&log_mle_poly_size.to_le_bytes());//ok
+println!("DS||log_poly_size {:?}",hash_input_0);
+hash_input_0.extend_from_slice(&nof_mle_poly.to_le_bytes());//ok combine degree
+println!("DS||log_poly_size ||deg {:?}",hash_input_0);
+hash_input_0.extend_from_slice(&claimed_sum.to_bytes_le());
+println!("DS||log_poly_size ||deg||claimedsum {:?}",hash_input_0);
 //challenge prev data
-hash_input_0.append(seed_rng.to_bytes_le().to_vec().as_mut());
+hash_input_0.extend_from_slice(&seed_rng.to_bytes_le());
+println!("DS||log_poly_size ||deg||seedrng {:?}",hash_input_0);
 //challenge meta data
-hash_input_0.append(&mut transcript_config.round_challenge_label);
+hash_input_0.extend_from_slice(&transcript_config.round_challenge_label);
+println!("DS||log_poly_size ||deg||seedrng||rngch_label {:?}",hash_input_0);
 //meta data of actual data
-hash_input_0.append(&mut transcript_config.round_poly_label);
+hash_input_0.extend_from_slice(&transcript_config.round_poly_label);
+println!("DS||log_poly_size ||deg||seedrng||rngch_label||round_poly_label {:?}",hash_input_0);
 //actual data
-hash_input_0.append(r0.len().to_le_bytes().to_vec().as_mut());
-hash_input_0.append(0u32.to_le_bytes().to_vec().as_mut());
-hash_input_0.append(r0[0].to_bytes_le().to_vec().as_mut());
-hash_input_0.append(r0[1].to_bytes_le().to_vec().as_mut());
+hash_input_0.extend_from_slice(&r0.len().to_le_bytes());
+println!("DS||log_poly_size ||deg||seedrng||rngch_label||round_poly_labe||r0len {:?}",hash_input_0);
+hash_input_0.extend_from_slice(&0u32.to_le_bytes());
+println!("DS||log_poly_size ||deg||seedrng||rngch_label||round_poly_labe||r0len||0 {:?}",hash_input_0);
+hash_input_0.extend_from_slice(&r0[0].to_bytes_le());
+println!("DS||log_poly_size ||deg||seedrng||rngch_label||round_poly_labe||r0len||0||r0[0] {:?}",hash_input_0);
+hash_input_0.extend_from_slice(&r0[1].to_bytes_le());
+println!("DS||log_poly_size ||deg||seedrng||rngch_label||round_poly_labe||r0len||0||r0[0]||r0[1] {:?}",hash_input_0);
 
 
 let mut output = vec![0u8; 32];
 let hasher_icicle = Keccak256::new(0).unwrap();
+println!("hash_input {:?}", hash_input_0);
 hasher_icicle.hash(HostSlice::from_slice(&hash_input_0), &HashConfig::default(), HostSlice::from_mut_slice(&mut output)).unwrap();
-println!("icicle transcript initial state {:?}", output);
+// println!("hash output {:?}", output);
+// println!("hash output len {:?}", output.len());
+// let hex_string = hex::encode(output.clone());
+
+// println!(": 0x{}", hex_string);
 let alpha0icicle = Fr::from_bytes_le(&output);
 println!("alpha0 ICICLE: {:?}", alpha0icicle);
-
+//alpha compute = (r1[0]+r1[1] - r0[0])/r0[1]
+println!("computed alpha0 sumncheck {:?}",(r1poly[0]+r1poly[1]-r0poly[0]) * r0poly[1].inv());
 //r1[0]+r1[1] = r0[alpha0] = r0poly[0] + alpha0 * ropoly[1]
 assert_eq!(r1poly[0]+r1poly[1],r0poly[0]+r0poly[1]*alpha0icicle, "r1 mismatch");
 

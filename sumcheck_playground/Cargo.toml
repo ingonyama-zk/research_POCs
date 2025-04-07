@@ -11,7 +11,7 @@ icicle-bn254 = { git = "https://github.com/ingonyama-zk/icicle.git", tag = "v3.6
 
 merlin = {version = "3.0.0"}
 
-
+hex = "0.4.3"
 sha3 = "0.10.8"
 # ark-ec = { version = "0.4.0" }
 log = "0.4.25"
