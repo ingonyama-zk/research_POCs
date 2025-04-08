@@ -148,7 +148,7 @@ hash_input_0.extend_from_slice(&r0[1].to_bytes_le());
 print_hex_bytes("[rp label||rplen", &entry_0);
 
 hash_input_0.extend_from_slice(&entry_0);
-print_hex_bytes("hash input:  [domain_separator_label || proof.mle_polynomial_size || proof.degree || public (hardcoded?) ||
+print_hex_bytes("rust hash input:  [domain_separator_label || proof.mle_polynomial_size || proof.degree || public (hardcoded?) ||
 || claimed_sum]", &hash_input_0.clone());
 
 
@@ -157,7 +157,7 @@ let hasher_icicle = Keccak256::new(0).unwrap();
 hasher_icicle.hash(HostSlice::from_slice(&hash_input_0), &HashConfig::default(), HostSlice::from_mut_slice(&mut output)).unwrap();
 print_hex_bytes("hash output", &output);
 let alpha0icicle = Fr::from_bytes_le(&output);
-println!("alpha0  Fr::from_bytes_le() {:?}", alpha0icicle);
+println!("rust alpha0  Fr::from_bytes_le() {:?}", alpha0icicle);
 
 //r1[0]+r1[1] = r0[alpha0] = r0poly[0] + alpha0 * ropoly[1]
 assert_eq!(r1poly[0]+r1poly[1],r0poly[0]+r0poly[1]*alpha0icicle, "r1 mismatch");
