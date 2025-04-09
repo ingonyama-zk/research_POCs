@@ -1,5 +1,6 @@
 use icicle_bn254::curve::ScalarField as Fr;
 use icicle_bn254::sumcheck::SumcheckWrapper;
+use icicle_bn254::program::bn254::FieldReturningValueProgram as P;
 use icicle_core::program::{PreDefinedProgram, ReturningValueProgram};
 use icicle_core::sumcheck::{Sumcheck, SumcheckConfig, SumcheckTranscriptConfig};
 use icicle_core::traits::FieldImpl;
@@ -11,7 +12,7 @@ use std::time::Instant;
 use sumcheck_playground::transcript::TranscriptProtocol;
 use sumcheck_playground::utils::*;
 
-const SAMPLES: usize = 1 << 22;
+const SAMPLES: usize = 1 << 16;
 
 pub fn verify_proof(
     sumcheck: SumcheckWrapper,
@@ -56,25 +57,24 @@ pub fn verify_proof(
     }
 }
 
-const NOF_MLE_POLY: usize = 4;
+const NOF_MLE_POLY: usize = 2;
 const IS_INPUT_ON_DEVICE: bool = false;
-//RUST_LOG=info cargo run --release --package sumcheck_playground --example prover_runtime
+//RUST_LOG=info cargo run --release --package sumcheck_playground --example jolt_ab_sumcheck
+//update backend path in the src/utils dir 
 pub fn main() {
     env_logger::init();
 
     try_load_and_set_backend_gpu();
-    //set_backend_cpu();    
+    //set_backend_cpu();
     //simulate previous state
     let mut prover_previous_transcript = Transcript::new(b"my_sumcheck");
 
     let gen_data_time = Instant::now();
     let poly_a = generate_random_vector::<Fr>(SAMPLES);
     let poly_b = generate_random_vector::<Fr>(SAMPLES);
-    let poly_c = generate_random_vector::<Fr>(SAMPLES);
-    let poly_e = generate_random_vector::<Fr>(SAMPLES);
 
     info!(
-        "Generate e,A,B,C of log size {:?}, time {:?}",
+        "Generate A,B of log size {:?}, time {:?}",
         SAMPLES.ilog2(),
         gen_data_time.elapsed()
     );
@@ -83,13 +83,17 @@ pub fn main() {
     let temp: Vec<Fr> = poly_a
         .iter()
         .zip(poly_b.iter())
-        .zip(poly_c.iter())
-        .zip(poly_e.iter())
-        .map(|(((a, b), c), e)| *a * *b * *e - *c * *e)
+        .map(|(a, b)| *a * *b)
         .collect();
     let claimed_sum = temp.iter().fold(Fr::zero(), |acc, &a| acc + a);
     info!("Compute claimed sum time {:?}", compute_sum_time.elapsed());
 
+
+    let ab_sumcheck = |vars: &mut Vec<<P as ReturningValueProgram>::ProgSymbol>|-> <P as ReturningValueProgram>::ProgSymbol {
+        let a = vars[0]; // Shallow copies pointing to the same memory in the backend
+        let b = vars[1];
+        return a * b;
+    };
     //add claimed sum to transcript to simulate previous state
     <Transcript as TranscriptProtocol<Fr>>::append_data(
         &mut prover_previous_transcript,
@@ -112,8 +116,6 @@ pub fn main() {
     let mle_poly_hosts = vec![
         HostSlice::<Fr>::from_slice(&poly_a),
         HostSlice::<Fr>::from_slice(&poly_b),
-        HostSlice::<Fr>::from_slice(&poly_c),
-        HostSlice::<Fr>::from_slice(&poly_e),
     ];
     let sumcheck = <icicle_bn254::sumcheck::SumcheckWrapper as Sumcheck>::new().unwrap();
 
@@ -125,8 +127,7 @@ pub fn main() {
         true,
         seed_rng,
     );
-    let combine_function = <icicle_bn254::program::bn254::FieldReturningValueProgram as ReturningValueProgram>::new_predefined(PreDefinedProgram::EQtimesABminusC).unwrap();
-
+    let combine_function = P::new(ab_sumcheck, 2).unwrap();
     if sumcheck_config.are_inputs_on_device {
         let mut device_mle_polys = Vec::with_capacity(NOF_MLE_POLY);
         for i in 0..NOF_MLE_POLY {
