@@ -63,6 +63,7 @@ pub fn main() {
     env_logger::init();
 
     try_load_and_set_backend_gpu();
+    //set_backend_cpu();    
     //simulate previous state
     let mut prover_previous_transcript = Transcript::new(b"my_sumcheck");
 
