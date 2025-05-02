@@ -16,6 +16,7 @@ const SAMPLES: usize = 131072; // 2^17
 
 pub fn bench_fold(c: &mut Criterion) {
     try_load_and_set_backend_gpu();
+    try_load_and_set_backend_metal();
     let mut group = c.benchmark_group("Fold2");
     let test_vec = generate_random_vector::<Fr>(SAMPLES);
     let challenge = Fr::from_u32(rand::random::<u32>());

@@ -29,6 +29,18 @@ pub fn try_load_and_set_backend_gpu() {
         set_backend_cpu();
     }
 }
+
+pub fn try_load_and_set_backend_metal() {
+    runtime::load_backend("../metal_backend/icicle/lib/backend").unwrap();
+    let device_metal = Device::new("METAL", 0);
+    let is_metal_device_available = icicle_runtime::is_device_available(&device_metal);
+    if is_metal_device_available {
+        icicle_runtime::set_device(&device_metal).unwrap();
+    } else {
+        set_backend_cpu();
+    }
+}
+
 pub fn generate_random_vector<F: FieldImpl>(size: usize) -> Vec<F>
 where
     <F as FieldImpl>::Config: GenerateRandom<F>,
