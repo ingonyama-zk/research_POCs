@@ -8,16 +8,9 @@ use icicle_core::{
     traits::{FieldImpl, GenerateRandom}};
 use icicle_runtime::memory::HostSlice;
 use icicle_runtime::{self, Device};
+use basic::utils::*;
 
-fn init_ntt_domain(max_ntt_size: u64) {
-    // Initialize NTT domain for all fields. Polynomial operations rely on NTT.
-    println!(
-        "Initializing NTT domain for max size 2^{}",
-        max_ntt_size.trailing_zeros()
-    );
-    let rou_bn254: Fr = get_root_of_unity(max_ntt_size);
-    initialize_domain(rou_bn254, &NTTInitDomainConfig::default()).unwrap();
-}
+
 
 fn ptest1<P: UnivariatePolynomial>(
     p1: P,
@@ -42,26 +35,10 @@ fn ptest1<P: UnivariatePolynomial>(
     )
 }
 
+
+// cargo run --release --package basic --example hello_poly
 fn main() {
-    icicle_runtime::load_backend("../cuda_backend/icicle/lib/backend").unwrap();
-    let _ = icicle_runtime::load_backend_from_env_or_default();
-
-    // Check if GPU is available
-    let device_cpu = Device::new("CPU", 0);
-    let mut device_gpu = Device::new("CUDA", 0);
-    let is_cuda_device_available = icicle_runtime::is_device_available(&device_gpu);
-    // Check if GPU is available
-    let device_cpu = Device::new("CPU", 0);
-    let mut device_gpu = Device::new("CUDA", 0);
-    let is_cuda_device_available = icicle_runtime::is_device_available(&device_gpu);
-
-    if is_cuda_device_available {
-        println!("GPU is available");
-    } else {
-        println!("GPU is not available, falling back to CPU only");
-        device_gpu = device_cpu.clone();
-    }
-
+    try_load_and_set_backend_metal();
     let size: usize = 1024;
     println!("Polynomial log_degree size: {:?}", 10);
     println!("Identity checking: (p1+p2)^2+(p1-p2)^2 =? 2 (p_1^2+p_2^2)");
@@ -69,16 +46,6 @@ fn main() {
     let logsize = 14;
     println!("max_domain size needed: {:?}", logsize);
     // let device = icicle_runtime::Device::new(&args.device_type, 0 /* =device_id*/);
-    icicle_runtime::set_device(&device_gpu).unwrap();
-    init_ntt_domain(1 << logsize);
-    let size: usize = 1024;
-    println!("Polynomial log_degree size: {:?}", 10);
-    println!("Identity checking: (p1+p2)^2+(p1-p2)^2 =? 2 (p_1^2+p_2^2)");
-    println!("Identity checking: (p1+p2)^2-(p1-p2)^2 =? 4 p_1.p_2");
-    let logsize = 14;
-    println!("max_domain size needed: {:?}", logsize);
-    // let device = icicle_runtime::Device::new(&args.device_type, 0 /* =device_id*/);
-    icicle_runtime::set_device(&device_gpu).unwrap();
     init_ntt_domain(1 << logsize);
 
     let size: usize = 1024;
