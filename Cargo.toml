@@ -1,6 +1,6 @@
 [workspace]
 members = [
-    "basic",
+    "basic", "course",
     "fri_poc",
     "sumcheck_playground"
 ]

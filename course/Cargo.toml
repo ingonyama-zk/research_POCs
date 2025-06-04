@@ -1,0 +1,13 @@
+[package]
+name = "course"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+icicle-hash = { workspace = true }
+icicle-core = { workspace = true }
+icicle-runtime = { workspace = true }
+num-bigint = "0.4"
+hex = "0.4"
+rand = "0.9.1"
+ed25519-dalek = "2.1.1"
