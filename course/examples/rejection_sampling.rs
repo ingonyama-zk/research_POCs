@@ -1,28 +1,19 @@
 use icicle_hash::keccak::Keccak256;
 use icicle_runtime::memory::HostSlice;
 use icicle_core::hash::HashConfig;
-use rand::{rng, Rng};
 use std::time::Instant;
+use hex;
 
 /// Performs rejection sampling to find a hash with a specific property
 fn rejection_sampling_hash(target_bits: u8) -> (Vec<u8>, [u8; 32], u32) {
     let hasher = Keccak256::new(0).unwrap();
-    let mut rng = rng();
     let mut attempts = 0;
-    
-    // Create a mask for checking the required number of leading zero bits
-    // this is like a proof of work requirement
-    let mask = if target_bits >= 8 {
-        0xFF
-    } else {
-        0xFF << (8 - target_bits)
-    };
     
     loop {
         attempts += 1;
         
         // Generate random 8-byte input
-        let input: Vec<u8> = (0..8).map(|_| rng.random::<u8>()).collect();
+        let input: Vec<u8> = (0..8).map(|_| rand::random::<u8>()).collect();
         let mut output = [0u8; 32];
         
         // Hash the input
@@ -33,10 +24,40 @@ fn rejection_sampling_hash(target_bits: u8) -> (Vec<u8>, [u8; 32], u32) {
         );
         
         // Check if the hash meets our criteria (has required leading zero bits)
-        if (output[0] & mask) == 0 {
+        if has_leading_zero_bits(&output, target_bits) {
             return (input, output, attempts);
         }
     }
+}
+
+/// Check if the hash has the required number of leading zero bits
+fn has_leading_zero_bits(hash: &[u8; 32], target_bits: u8) -> bool {
+    if target_bits == 0 {
+        return true;
+    }
+    
+    let full_bytes = target_bits / 8;
+    let remaining_bits = target_bits % 8;
+    
+    // Check full bytes (must be all zeros)
+    for i in 0..full_bytes as usize {
+        if hash[i] != 0 {
+            return false;
+        }
+    }
+    
+    // Check remaining bits in the next byte
+    if remaining_bits > 0 {
+        let byte_index = full_bytes as usize;
+        if byte_index < hash.len() {
+            let mask = 0xFF << (8 - remaining_bits);
+            if (hash[byte_index] & mask) != 0 {
+                return false;
+            }
+        }
+    }
+    
+    true
 }
 
 fn main() {
