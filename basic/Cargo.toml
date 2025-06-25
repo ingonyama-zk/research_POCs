@@ -12,9 +12,9 @@ icicle-hash = { workspace = true }
 clap = {workspace = true}
 rayon = {workspace = true}
 
-icicle-m31 = { git = "https://github.com/ingonyama-zk/icicle.git", tag = "v3.8.0"}
-icicle-bn254 = { git = "https://github.com/ingonyama-zk/icicle.git", tag = "v3.8.0"}
-icicle-babybear = { git = "https://github.com/ingonyama-zk/icicle.git", tag = "v3.8.0" }
+icicle-m31 = { git = "https://github.com/ingonyama-zk/icicle.git", tag = "v3.9.2"}
+icicle-bn254 = { git = "https://github.com/ingonyama-zk/icicle.git", tag = "v3.9.2"}
+icicle-babybear = { git = "https://github.com/ingonyama-zk/icicle.git", tag = "v3.9.2" }
 hex = "0.4" 
 # icicle-babybear = {path = "../../icicle/wrappers/rust/icicle-fields/icicle-babybear" }
 # icicle-bn254 = {path = "../../icicle/wrappers/rust/icicle-curves/icicle-bn254" }

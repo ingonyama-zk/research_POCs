@@ -8,9 +8,9 @@ members = [
 resolver = "2"
 
 [workspace.dependencies]
-icicle-runtime = { git = "https://github.com/ingonyama-zk/icicle.git", tag = "v3.8.0" }
-icicle-core = { git = "https://github.com/ingonyama-zk/icicle.git", tag = "v3.8.0" }
-icicle-hash = { git = "https://github.com/ingonyama-zk/icicle.git",tag = "v3.8.0"}
+icicle-runtime = { git = "https://github.com/ingonyama-zk/icicle.git", tag = "v3.9.2" }
+icicle-core = { git = "https://github.com/ingonyama-zk/icicle.git", tag = "v3.9.2" }
+icicle-hash = { git = "https://github.com/ingonyama-zk/icicle.git",tag = "v3.9.2"}
 clap = { version = "4.5.37", features = ["derive"] }
 rayon="1.5"
 #local
