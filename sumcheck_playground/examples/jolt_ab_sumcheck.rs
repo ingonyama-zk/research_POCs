@@ -1,9 +1,9 @@
 use icicle_bn254::curve::ScalarField as Fr;
 use icicle_bn254::sumcheck::SumcheckWrapper;
-use icicle_bn254::program::bn254::FieldReturningValueProgram as P;
-use icicle_core::program::{PreDefinedProgram, ReturningValueProgram};
+use icicle_bn254::program::bn254::ReturningValueProgram as P;
+use icicle_core::bignum::BigNum;
+use icicle_core::program::ReturningValueProgramImpl;
 use icicle_core::sumcheck::{Sumcheck, SumcheckConfig, SumcheckTranscriptConfig};
-use icicle_core::traits::FieldImpl;
 use icicle_hash::blake3::Blake3;
 use icicle_runtime::memory::{DeviceSlice, DeviceVec, HostSlice};
 use log::info;
@@ -89,7 +89,7 @@ pub fn main() {
     info!("Compute claimed sum time {:?}", compute_sum_time.elapsed());
 
 
-    let ab_sumcheck = |vars: &mut Vec<<P as ReturningValueProgram>::ProgSymbol>|-> <P as ReturningValueProgram>::ProgSymbol {
+    let ab_sumcheck = |vars: &mut Vec<<P as icicle_core::program::ReturningValueProgramImpl>::ProgSymbol>| -> <P as icicle_core::program::ReturningValueProgramImpl>::ProgSymbol {
         let a = vars[0]; // Shallow copies pointing to the same memory in the backend
         let b = vars[1];
         return a * b;
@@ -158,7 +158,8 @@ pub fn main() {
             combine_function,
             &transcript_config,
             &sumcheck_config,
-        );
+        ).unwrap(); // <-- Add .unwrap() here
+
         info!("Prover time {:?}", prover_time.elapsed());
         let verify_time = Instant::now();
         verify_proof(sumcheck, proof, claimed_sum);

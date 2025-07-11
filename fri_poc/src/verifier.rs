@@ -1,19 +1,15 @@
 use icicle_core::{
-    hash::Hasher,
-    merkle::{MerkleProof, MerkleTree},
-    ntt::{get_root_of_unity, NTTDomain, NTT},
-    traits::{Arithmetic, FieldImpl},
-    vec_ops::*,
+    bignum::BigNum, hash::Hasher, merkle::{MerkleProof, MerkleTree}, ntt::{get_root_of_unity, NTTDomain, NTT}, ring::IntegerRing, traits::{Arithmetic, Invertible}, vec_ops::*
 };
 
 use crate::utils::*;
 use crate::{data_structures::*, transcript::*};
 use icicle_hash::blake2s::Blake2s;
-use log::debug;
+use log::debug; 
 use merlin::Transcript;
 
 //methods for verifier
-impl<F: FieldImpl> Friproof<F> {
+impl<F: Arithmetic+BigNum+Invertible> Friproof<F> {
     //checks the path of the query proof
     pub fn verify_path(
         &mut self,
@@ -58,8 +54,7 @@ pub fn verify<F>(
     transcript: &mut Transcript,
 ) -> Result<bool, &'static str>
 where
-    F: FieldImpl + Arithmetic,
-    F::Config: VecOps<F> + NTTDomain<F> + NTT<F, F>,
+    F: Arithmetic + BigNum + Invertible + VecOps<F> + NTTDomain<F> + IntegerRing,
 {
     debug!("query_proof_len {:?}", friproof.query_proofs.len());
     let exp: usize = friproof.query_proofs.len() / fri_config.num_queries;
@@ -176,7 +171,7 @@ where
 
     //collinearity check
     let mut rq: usize = 0;
-    let two_inv: F = F::from_u32(2).inv();
+    let two_inv: F = F::from(2u32).inv();
     let nr: usize = num_rounds.try_into().unwrap();
     debug!("leafs {:?}", leafs);
     debug!("leafs sym {:?}", leafs_sym);
@@ -186,7 +181,7 @@ where
         let index_q = indices[rq..rq + nr].to_vec();
         let index_symq = indices_sym[rq..rq + nr].to_vec();
         for r in 0..nr {
-            let rou = get_root_of_unity::<F>((size / (1 << r)).try_into().unwrap());
+            let rou:F = get_root_of_unity::<F>((size / (1 << r)).try_into().unwrap()).unwrap();
             let rou_inv = rou.inv();
             let l_even = (leafs_q[r] + leafs_sym_q[r]) * two_inv;
             let l_odd = (leafs_q[r] - leafs_sym_q[r])

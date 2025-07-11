@@ -1,5 +1,5 @@
 use icicle_babybear::field::ScalarField as Fr;
-use icicle_core::traits::FieldImpl;
+use icicle_core::traits::{Arithmetic, GenerateRandom, Invertible};
 use log::{debug, info};
 use merlin::Transcript;
 
@@ -21,14 +21,14 @@ fn diagnostic_prover_test() {
     };
 
     let input_data: Vec<Fr> = vec![
-        Fr::from_u32(1),
-        Fr::from_u32(2),
-        Fr::from_u32(3),
-        Fr::from_u32(4),
-        Fr::from_u32(5),
-        Fr::from_u32(6),
-        Fr::from_u32(7),
-        Fr::from_u32(8),
+        Fr::from(1u32),
+        Fr::from(2u32),
+        Fr::from(3u32),
+        Fr::from(4u32),
+        Fr::from(5u32),
+        Fr::from(6u32),
+        Fr::from(7u32),
+        Fr::from(8u32),
     ];
     debug!("input_data {:?}", input_data);
     let size: usize = input_data.len() * fri_config.blow_up_factor;

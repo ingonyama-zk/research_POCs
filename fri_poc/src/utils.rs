@@ -1,11 +1,8 @@
 use icicle_core::{
-    hash::HashConfig,
-    ntt::{
+    bignum::BigNum, hash::HashConfig, ntt::{
         get_root_of_unity, initialize_domain, ntt, NTTConfig, NTTDir, NTTDomain,
         NTTInitDomainConfig, NTT,
-    },
-    polynomials::UnivariatePolynomial,
-    traits::{Arithmetic, FieldImpl, GenerateRandom},
+    }, polynomials::UnivariatePolynomial, ring::IntegerRing, traits::{Arithmetic, GenerateRandom, Invertible}
 };
 use icicle_hash::blake2s::Blake2s;
 use icicle_runtime::{memory::HostSlice, runtime, Device};
@@ -41,24 +38,21 @@ pub fn try_load_and_set_backend_metal() {
     }
 }
 
-pub fn generate_random_vector<F: FieldImpl>(size: usize) -> Vec<F>
-where
-    <F as FieldImpl>::Config: GenerateRandom<F>,
+pub fn generate_random_vector<F: Arithmetic+BigNum+Invertible+GenerateRandom>(size: usize) -> Vec<F>
 {
-    F::Config::generate_random(size)
+    F::generate_random(size)
 }
 
 pub fn generate_random_poly<P>(size: usize, from_coeffs: bool) -> P
 where
     P: UnivariatePolynomial,
-    P::Field: FieldImpl,
-    P::FieldConfig: GenerateRandom<P::Field>,
+    P::Coeff: Arithmetic+BigNum+Invertible+GenerateRandom,
 {
     println!(
         "Randomizing polynomial of size {} (from_coeffs: {})",
         size, from_coeffs
     );
-    let coeffs_or_evals = P::FieldConfig::generate_random(size);
+    let coeffs_or_evals = P::Coeff::generate_random(size);
     let p = if from_coeffs {
         P::from_coeffs(HostSlice::from_slice(&coeffs_or_evals), size)
     } else {
@@ -69,8 +63,7 @@ where
 
 pub fn init_ntt_domain<F>(max_ntt_size: u64)
 where
-    F: FieldImpl,
-    <F as FieldImpl>::Config: NTTDomain<F>,
+    F: Arithmetic+IntegerRing+NTTDomain<F>,
 {
     // Initialize NTT domain for all fields. Polynomial operations rely on NTT.
     println!(
@@ -78,14 +71,13 @@ where
         max_ntt_size.trailing_zeros()
     );
     //test will fail when coset gen !=1
-    let rou: F = get_root_of_unity::<F>(max_ntt_size);
+    let rou: F = get_root_of_unity::<F>(max_ntt_size).unwrap();
     //test fails for coset gen!=1 since init domain doesnt accept order of primitive root !=2
     initialize_domain(rou, &NTTInitDomainConfig::default()).unwrap();
 }
 
-pub fn coeff_to_eval_blowup<F: FieldImpl>(mut input: Vec<F>, size: usize) -> Vec<F>
-where
-    <F as FieldImpl>::Config: NTTDomain<F> + NTT<F, F>,
+pub fn coeff_to_eval_blowup<F: Arithmetic+IntegerRing+NTTDomain<F>+NTT<F, F>>(mut input: Vec<F>, size: usize) -> Vec<F>
+
 {
     //zero pad coeffs to dest size
     let mut vz: Vec<F> = vec![F::zero(); size - input.len()];
@@ -104,9 +96,8 @@ where
     poly_eval
 }
 
-pub fn eval_to_eval_blowup<F: FieldImpl>(input: Vec<F>, size: usize) -> Vec<F>
-where
-    <F as FieldImpl>::Config: NTTDomain<F> + NTT<F, F>,
+pub fn eval_to_eval_blowup<F: Arithmetic+IntegerRing+NTTDomain<F>+NTT<F, F>>(input: Vec<F>, size: usize) -> Vec<F>
+
 {
     let logsize = input.len().ilog2();
     init_ntt_domain::<F>(1 << logsize);
@@ -155,7 +146,7 @@ pub fn hash_fuse(a: Vec<u8>, b: Vec<u8>) -> Vec<u8> {
 
 pub fn proof_of_work<F>(pow_bits: usize, transcript_challenge: F) -> u64
 where
-    F: FieldImpl,
+    F: Arithmetic+IntegerRing,
 {
     (0u64..u64::MAX) // Create a parallel iterator, how to run this using batch mode of the hash used?
         .find(|&nonce| {
@@ -187,7 +178,7 @@ pub fn generate_samples_in_range(seed_bytes: Vec<u8>, size: usize, max: usize) -
 
 pub fn pow<F>(mut base: F, mut exp: u32) -> F
 where
-    F: FieldImpl + Arithmetic,
+    F: Arithmetic+IntegerRing,
 {
     let mut result = F::one();
 

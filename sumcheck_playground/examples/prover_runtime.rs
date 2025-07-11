@@ -1,8 +1,9 @@
 use icicle_bn254::curve::ScalarField as Fr;
 use icicle_bn254::sumcheck::SumcheckWrapper;
-use icicle_core::program::{PreDefinedProgram, ReturningValueProgram};
+use icicle_core::bignum::BigNum;
+use icicle_core::program::{PreDefinedProgram, ReturningValueProgramImpl};
+use icicle_bn254::program::bn254::ReturningValueProgram as P;
 use icicle_core::sumcheck::{Sumcheck, SumcheckConfig, SumcheckTranscriptConfig};
-use icicle_core::traits::FieldImpl;
 use icicle_hash::blake3::Blake3;
 use icicle_runtime::memory::{DeviceSlice, DeviceVec, HostSlice};
 use log::info;
@@ -125,7 +126,7 @@ pub fn main() {
         true,
         seed_rng,
     );
-    let combine_function = <icicle_bn254::program::bn254::FieldReturningValueProgram as ReturningValueProgram>::new_predefined(PreDefinedProgram::EQtimesABminusC).unwrap();
+    let combine_function = <P as ReturningValueProgramImpl>::new_predefined(PreDefinedProgram::EQtimesABminusC).unwrap();
 
     if sumcheck_config.are_inputs_on_device {
         let mut device_mle_polys = Vec::with_capacity(NOF_MLE_POLY);
@@ -146,7 +147,7 @@ pub fn main() {
             combine_function,
             &transcript_config,
             &sumcheck_config,
-        );
+        ).unwrap();
         info!("Prover time {:?}", prover_time.elapsed());
     } else {
         let prover_time = Instant::now();
@@ -157,7 +158,7 @@ pub fn main() {
             combine_function,
             &transcript_config,
             &sumcheck_config,
-        );
+        ).unwrap();
         info!("Prover time {:?}", prover_time.elapsed());
         let verify_time = Instant::now();
         verify_proof(sumcheck, proof, claimed_sum);

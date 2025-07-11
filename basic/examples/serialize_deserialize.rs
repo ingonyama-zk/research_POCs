@@ -1,16 +1,18 @@
 use icicle_bn254::curve::ScalarField as Fr;
-use icicle_core::traits::{FieldImpl, GenerateRandom};
+use icicle_core::{bignum::BigNum, traits::{Arithmetic, GenerateRandom}};
 use rayon::prelude::*;
 use std::time::Instant;
-pub fn generate_random_vector<F: FieldImpl>(size: usize) -> Vec<F>
-where
-    <F as FieldImpl>::Config: GenerateRandom<F>,
+
+pub fn generate_random_vector<T>(size: usize) -> Vec<T>
+where T: GenerateRandom+ BigNum
 {
-    F::Config::generate_random(size)
+    T::generate_random(size)
 }
 
-fn serialize_vector<F: FieldImpl>(fields: &[F]) -> Vec<u8> {
-    let field_size = std::mem::size_of::<F>();
+fn serialize_vector<T>(fields: &[T]) -> Vec<u8> 
+where  T: BigNum+Arithmetic
+{
+    let field_size = std::mem::size_of::<T>();
     let mut buffer = Vec::with_capacity(fields.len() * field_size);
 
     let chunks: Vec<Vec<u8>> = fields
@@ -25,13 +27,17 @@ fn serialize_vector<F: FieldImpl>(fields: &[F]) -> Vec<u8> {
     buffer
 }
 
-fn deserialize_vector<F: FieldImpl>(bytes: &[u8]) -> Vec<F> {
-    let field_size = std::mem::size_of::<F>();
+fn deserialize_vector<T>(bytes: &[u8]) -> Vec<T>
+where  T: BigNum+Arithmetic {
+    let field_size = std::mem::size_of::<T>();
     assert!(bytes.len() % field_size == 0, "Invalid byte length");
 
     bytes
         .par_chunks_exact(field_size)
-        .map(|chunk| F::from_bytes_le(chunk))
+        .map(|chunk| {
+            let array = chunk.to_vec();
+            T::from_bytes_le(&array)
+        })
         .collect()
 }
 

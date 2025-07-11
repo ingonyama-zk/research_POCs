@@ -2,10 +2,7 @@ use std::time::Instant;
 
 use crate::{data_structures::*, transcript::*, utils::*};
 use icicle_core::{
-    merkle::{MerkleProof, MerkleTree},
-    ntt::{get_root_of_unity, NTTDomain, NTT},
-    traits::{Arithmetic, FieldImpl},
-    vec_ops::*,
+    merkle::{MerkleProof, MerkleTree}, ntt::{get_root_of_unity, NTTDomain, NTT}, ring::IntegerRing, traits::{Arithmetic, Invertible}, vec_ops::*
 };
 use log::{debug, info};
 use merlin::Transcript;
@@ -19,8 +16,7 @@ pub fn prove<F>(
     code_word: Vec<F>, //evals with blow up factor included
 ) -> Friproof<F>
 where
-    F: FieldImpl + Arithmetic,
-    F::Config: VecOps<F> + NTTDomain<F> + NTT<F, F>,
+    F: Arithmetic+IntegerRing+VecOps<F> + NTTDomain<F> + NTT<F, F>+Invertible,
 {
     //let protocol_security =
     let size: usize = code_word.len();
@@ -28,7 +24,7 @@ where
 
     let precompute_domain = Instant::now();
     //Begin precompute domain, if NTT domain was exposed could read it directly
-    let rou: F = get_root_of_unity::<F>(size.try_into().unwrap());
+    let rou: F = get_root_of_unity::<F>(size.try_into().unwrap()).unwrap();
     let rou_inv: F = rou.inv();
 
     let mut inv_domain: Vec<F> = Vec::with_capacity(size / 2);

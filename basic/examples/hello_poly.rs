@@ -1,11 +1,13 @@
+use std::char::from_u32;
+
 use rand::random;
 
-use icicle_bn254::{curve::ScalarField as Fr, polynomials::DensePolynomial as polybn254};
+use icicle_bn254::{curve::ScalarField as Fr};
 
 use icicle_core::{
     ntt::{get_root_of_unity, initialize_domain, NTTInitDomainConfig},
     polynomials::UnivariatePolynomial,
-    traits::{FieldImpl, GenerateRandom}};
+    traits::{Arithmetic,GenerateRandom}};
 use icicle_runtime::memory::HostSlice;
 use icicle_runtime::{self, Device};
 use basic::utils::*;
@@ -15,16 +17,16 @@ use basic::utils::*;
 fn ptest1<P: UnivariatePolynomial>(
     p1: P,
     p2: P,
-    alpha: P::Field,
-) -> (P::Field, P::Field, P::Field, P::Field) {
+    alpha: <P as UnivariatePolynomial>::Coeff,
+) -> (P::Coeff, P::Coeff, P::Coeff, P::Coeff) {
     let ta: P = p1.add(&p2);
     let ts: P = p1.sub(&p2);
     let tAsq = ta.mul(&ta);
     let tssq = ts.mul(&ts);
     let t1_l = tAsq.add(&tssq);
     let t2_l = tAsq.sub(&tssq);
-    let two = <P::Field as FieldImpl>::from_u32(2);
-    let four = <P::Field as FieldImpl>::from_u32(4);
+    let two = P::Coeff::from(2u32);
+    let four = P::Coeff::from(4u32);
     let t1_r = p1.mul(&p1).add(&p2.mul(&p2)).mul_by_scalar(&two);
     let t2_r = p1.mul(&p2).mul_by_scalar(&four);
     (
@@ -51,22 +53,20 @@ fn main() {
     let size: usize = 1024;
     let size: usize = 1024;
 
-    let two = Fr::from_u32(2);
-    let one = Fr::from_u32(1);
-    let four = Fr::from_u32(4);
-    let alpha = Fr::from_u32(random::<u32>());
-    let two = Fr::from_u32(2);
-    let one = Fr::from_u32(1);
-    let four = Fr::from_u32(4);
-    let alpha = Fr::from_u32(random::<u32>());
+    let two = Fr::from(2u32);
+    let one = Fr::from(1u32);
+    let four = Fr::from(4u32);
+    let alpha = Fr::from(random::<u32>());
+    let two = Fr::from(2u32);
+    let one = Fr::from(1u32);
+    let four = Fr::from(4u32);
+    let alpha = Fr::from(random::<u32>());
 
-    let v1 = <Fr as FieldImpl>::Config::generate_random(size);
-    let v2 = <Fr as FieldImpl>::Config::generate_random(size);
-    let v1 = <Fr as FieldImpl>::Config::generate_random(size);
-    let v2 = <Fr as FieldImpl>::Config::generate_random(size);
+    let v1 = Fr::generate_random(size);
+    let v2 =Fr::generate_random(size);
 
-    let p1 = polybn254::from_rou_evals(HostSlice::from_slice(&v1), size);
-    let p2 = polybn254::from_rou_evals(HostSlice::from_slice(&v2), size);
+    let p1: icicle_bn254::polynomials::DensePolynomial = UnivariatePolynomial::from_rou_evals(HostSlice::from_slice(&v1), size);
+    let p2: icicle_bn254::polynomials::DensePolynomial = UnivariatePolynomial::from_rou_evals(HostSlice::from_slice(&v2), size);
     let (a1, a2, a3, a4) = ptest1(p1.clone(), p2.clone(), alpha);
     // //(p1+p2)^2
     let tA = &(&p1 + &p2) * &(&p1 + &p2);

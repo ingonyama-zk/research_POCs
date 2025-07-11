@@ -2,9 +2,7 @@ use criterion::{criterion_group, criterion_main, Criterion};
 use fri_poc::{data_structures::*, utils::*};
 
 use icicle_core::{
-    ntt::{get_root_of_unity, ntt, NTTConfig, NTTDir},
-    polynomials::UnivariatePolynomial,
-    traits::{Arithmetic, FieldImpl},
+    bignum::BigNum, ntt::{get_root_of_unity, ntt, NTTConfig, NTTDir}, polynomials::UnivariatePolynomial, traits::{Arithmetic, GenerateRandom, Invertible}
 };
 use icicle_runtime::memory::HostSlice;
 
@@ -12,14 +10,14 @@ use fri_poc::prover::prove;
 use icicle_babybear::{field::ScalarField as Fr, polynomials::DensePolynomial};
 use merlin::Transcript;
 
-const SAMPLES: usize = 131072; // 2^17
+const SAMPLES: usize = 1<<17; // 2^17
 
 pub fn bench_fold(c: &mut Criterion) {
     try_load_and_set_backend_gpu();
-    try_load_and_set_backend_metal();
+//    try_load_and_set_backend_metal();
     let mut group = c.benchmark_group("Fold2");
     let test_vec = generate_random_vector::<Fr>(SAMPLES);
-    let challenge = Fr::from_u32(rand::random::<u32>());
+    let challenge = Fr::from(rand::random::<u32>());
     let logsize = SAMPLES.ilog2();
     // this cannot compute cosets
     init_ntt_domain::<Fr>(1 << logsize);
@@ -40,9 +38,9 @@ pub fn bench_fold(c: &mut Criterion) {
     }
     let mut new_domain_evals = vec![Fr::zero(); SAMPLES];
     let new_domain_eval_size = HostSlice::from_mut_slice(&mut new_domain_evals[..]);
-    let rou: Fr = get_root_of_unity::<Fr>(SAMPLES.try_into().unwrap());
+    let rou: Fr = get_root_of_unity::<Fr>(SAMPLES.try_into().unwrap()).unwrap();
     let rou_inv: Fr = rou.inv();
-    let two_inv: Fr = Fr::from_u32(2).inv();
+    let two_inv: Fr = Fr::from(2u32).inv();
     let mut inv_domain: Vec<Fr> = Vec::with_capacity(SAMPLES / 2);
     let mut current = Fr::one(); // can define coset gen inv here if we want
 

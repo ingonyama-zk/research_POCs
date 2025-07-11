@@ -1,10 +1,7 @@
 use std::iter;
 
 use icicle_core::{
-    merkle::MerkleTree,
-    ntt::{get_root_of_unity, ntt, NTTConfig, NTTDir},
-    polynomials::UnivariatePolynomial,
-    traits::{Arithmetic, FieldImpl},
+    bignum::BigNum, merkle::MerkleTree, ntt::{get_root_of_unity, ntt, NTTConfig, NTTDir}, polynomials::UnivariatePolynomial, traits::{Arithmetic, GenerateRandom, Invertible}
 };
 
 use icicle_runtime::memory::HostSlice;
@@ -24,7 +21,7 @@ fn fold_poly(
     &e + &(&o * &beta)
 }
 
-fn fold_poly2<P: UnivariatePolynomial>(poly: P, beta: P::Field) -> P {
+fn fold_poly2<P: UnivariatePolynomial<Coeff=Fr>>(poly: P, beta: P::Coeff) -> P {
     let o = poly.odd(); // Get the odd terms
     let e = poly.even(); // Get the even terms
                          // Perform the fold operation: e + (o * beta)
@@ -38,17 +35,17 @@ pub fn foldpoly1vs2test() {
     // this cannot compute cosets
     init_ntt_domain::<Fr>(1 << logsize);
     let v = vec![
-        Fr::from_u32(1),
-        Fr::from_u32(2),
-        Fr::from_u32(3),
-        Fr::from_u32(4),
-        Fr::from_u32(5),
-        Fr::from_u32(6),
-        Fr::from_u32(7),
-        Fr::from_u32(8),
+        Fr::from(1u32),
+        Fr::from(2u32),
+        Fr::from(3u32),
+        Fr::from(4u32),
+        Fr::from(5u32),
+        Fr::from(6u32),
+        Fr::from(7u32),
+        Fr::from(8u32),
     ];
     let poly = DensePolynomial::from_rou_evals(HostSlice::from_slice(&v), v.len());
-    let gamma = Fr::from_u32(200);
+    let gamma = Fr::from(200u32);
     let p_fold = fold_poly(poly.clone(), gamma);
     let p_fold2 = fold_poly2(poly, gamma);
     let mut t1 = vec![Fr::zero(); size / 2];
@@ -90,7 +87,7 @@ pub fn poly_fold_vector_fold_sanity_no_coset() {
     let v_fold = frilayer.fold_evals(Fr::from_u32(1u32), gamma);
     println!("fold vec in evals: coset gen =1  {:?} ", v_fold);
 
-    let rou = get_root_of_unity::<Fr>(size.try_into().unwrap());
+    let rou = get_root_of_unity::<Fr>(size.try_into().unwrap()).unwrap();
     let rou_inv = rou.inv();
     let two_inv = (Fr::from_u32(2)).inv();
     let mut f_e = Vec::<Fr>::new();
@@ -148,8 +145,8 @@ pub fn poly_fold_vector_fold_sanity_coset() {
         current_code_word: v_eval_coset_vec.clone(),
     };
     //fold coset eval vec.
-    let coset_gen3: Fr = Fr::from_u32(3u32);
-    let rou_baby_bear: Fr = get_root_of_unity::<Fr>(size.try_into().unwrap());
+    let coset_gen3: Fr = Fr::from(3u32);
+    let rou_baby_bear: Fr = get_root_of_unity::<Fr>(size.try_into().unwrap()).unwrap();
     let v_fold = frilayer.fold_evals(coset_gen3, gamma);
     println!("fold vec in evals: coset D^2  {:?} ", v_fold);
 
@@ -244,7 +241,7 @@ pub fn fold_evals_test() {
 
     //init coset and get v into coset eval form
     let mut cfg = NTTConfig::<Fr>::default();
-    let rou_baby_bear: Fr = get_root_of_unity::<Fr>(size.try_into().unwrap());
+    let rou_baby_bear: Fr = get_root_of_unity::<Fr>(size.try_into().unwrap()).unwrap();
     cfg.coset_gen = Fr::from_u32(3u32);
     let mut v_evals = vec![Fr::zero(); size];
     let v_slice = HostSlice::from_slice(&v);
