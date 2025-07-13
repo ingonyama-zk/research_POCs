@@ -1,8 +1,9 @@
-use icicle_core::traits::{Arithmetic, Invertible};
+use icicle_core::traits::Arithmetic;
 use icicle_core::bignum::BigNum;
+use icicle_core::field::Field;
 use merlin::Transcript;
 
-pub trait TranscriptProtocol<F: Arithmetic + BigNum +Invertible> {
+pub trait TranscriptProtocol<F: Arithmetic + Field +BigNum> {
     fn fri_domain_sep(
         &mut self,
         domain_seperator: &'static [u8],
@@ -17,7 +18,7 @@ pub trait TranscriptProtocol<F: Arithmetic + BigNum +Invertible> {
     fn add_nonce(&mut self, nonce: u64);
 }
 
-impl<F: Arithmetic + BigNum +Invertible> TranscriptProtocol<F> for Transcript {
+impl<F: Arithmetic + Field +BigNum> TranscriptProtocol<F> for Transcript {
     fn fri_domain_sep(
         &mut self,
         domain_seperator: &'static [u8],

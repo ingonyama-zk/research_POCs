@@ -3,6 +3,7 @@ use std::iter;
 use icicle_core::{
     bignum::BigNum, hash::Hasher, merkle::{MerkleProof, MerkleTree, MerkleTreeConfig}, ntt::{get_root_of_unity, NTTDomain}, polynomials::UnivariatePolynomial, ring::IntegerRing, traits::{Arithmetic, Invertible}, vec_ops::*
 };
+use icicle_core::field::Field;
 use icicle_hash::blake2s::Blake2s;
 use icicle_runtime::memory::{HostOrDeviceSlice, HostSlice};
 use rand::distr::uniform::UniformSampler;
@@ -32,13 +33,13 @@ pub struct Friproof<T> {
     pub pow_nonce: u64,
 }
 
-impl<F: Arithmetic+BigNum+Invertible> Default for Friproof<F> {
+impl<F: Arithmetic+Field+BigNum> Default for Friproof<F> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<F: Arithmetic+BigNum+Invertible> Friproof<F> {
+impl<F: Arithmetic+Field+BigNum> Friproof<F> {
     pub fn new() -> Self {
         Friproof {
             query_proofs: Vec::<Vec<MerkleProof>>::new(),
@@ -53,13 +54,13 @@ pub struct Frilayerdata<T> {
     pub layer_trees: Vec<MerkleTree>,
 }
 
-impl<F: Arithmetic+BigNum+Invertible> Default for Frilayerdata<F> {
+impl<F: Arithmetic+Field+BigNum> Default for Frilayerdata<F> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<F: Arithmetic+BigNum+Invertible> Frilayerdata<F> {
+impl<F: Arithmetic+Field+BigNum> Frilayerdata<F> {
     pub fn new() -> Self {
         Frilayerdata {
             layer_code_words: Vec::<Vec<F>>::new(),
@@ -77,7 +78,7 @@ pub struct Current_layer<T> {
 
 impl<F> Default for Current_layer<F>
 where
-    F: Arithmetic + IntegerRing + VecOps<F> + NTTDomain<F>+Invertible,
+    F: Arithmetic + Field+BigNum+ VecOps<F> + NTTDomain<F>,
 {
     fn default() -> Self {
         Self::new()
@@ -86,7 +87,7 @@ where
 
 impl<F> Current_layer<F>
 where
-F: Arithmetic + IntegerRing + VecOps<F> + NTTDomain<F>+Invertible,
+F: Arithmetic + Field+BigNum+ VecOps<F> + NTTDomain<F>,
 {
     pub fn new() -> Self {
         Current_layer {

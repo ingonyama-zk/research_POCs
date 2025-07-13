@@ -2,9 +2,10 @@ use std::time::Instant;
 
 use crate::{data_structures::*, transcript::*, utils::*};
 use icicle_core::{
-    merkle::{MerkleProof, MerkleTree}, ntt::{get_root_of_unity, NTTDomain, NTT}, ring::IntegerRing, traits::{Arithmetic, Invertible}, vec_ops::*
+    bignum::BigNum, merkle::{MerkleProof, MerkleTree}, ntt::{get_root_of_unity, NTTDomain, NTT}, ring::IntegerRing, traits::{Arithmetic, Invertible}, vec_ops::*
 };
 use log::{debug, info};
+use icicle_core::field::Field;
 use merlin::Transcript;
 
 // Prover can input a vector of coefficients, or a vector of evaluations (codeword).
@@ -16,7 +17,7 @@ pub fn prove<F>(
     code_word: Vec<F>, //evals with blow up factor included
 ) -> Friproof<F>
 where
-    F: Arithmetic+IntegerRing+VecOps<F> + NTTDomain<F> + NTT<F, F>+Invertible,
+    F: Arithmetic+Field+BigNum+VecOps<F> + NTTDomain<F> + NTT<F, F>,
 {
     //let protocol_security =
     let size: usize = code_word.len();
