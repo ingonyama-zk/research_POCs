@@ -7,9 +7,10 @@ use crate::{data_structures::*, transcript::*};
 use icicle_hash::blake2s::Blake2s;
 use log::debug; 
 use merlin::Transcript;
+use icicle_core::field::Field;
 
 //methods for verifier
-impl<F: Arithmetic+BigNum+Invertible> Friproof<F> {
+impl<F: Arithmetic+Field+BigNum> Friproof<F> {
     //checks the path of the query proof
     pub fn verify_path(
         &mut self,
@@ -54,7 +55,7 @@ pub fn verify<F>(
     transcript: &mut Transcript,
 ) -> Result<bool, &'static str>
 where
-    F: Arithmetic + BigNum + Invertible + VecOps<F> + NTTDomain<F> + IntegerRing,
+    F: Arithmetic + BigNum + Field + VecOps<F> + NTTDomain<F> + IntegerRing,
 {
     debug!("query_proof_len {:?}", friproof.query_proofs.len());
     let exp: usize = friproof.query_proofs.len() / fri_config.num_queries;
