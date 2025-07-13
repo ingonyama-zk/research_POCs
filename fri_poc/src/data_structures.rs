@@ -1,12 +1,7 @@
 use std::iter;
 
 use icicle_core::{
-    hash::Hasher,
-    merkle::{MerkleProof, MerkleTree, MerkleTreeConfig},
-    ntt::{get_root_of_unity, NTTDomain},
-    polynomials::UnivariatePolynomial,
-    traits::{Arithmetic, FieldImpl},
-    vec_ops::*,
+    bignum::BigNum, hash::Hasher, merkle::{MerkleProof, MerkleTree, MerkleTreeConfig}, ntt::{get_root_of_unity, NTTDomain}, polynomials::UnivariatePolynomial, ring::IntegerRing, traits::{Arithmetic, Invertible}, vec_ops::*
 };
 use icicle_hash::blake2s::Blake2s;
 use icicle_runtime::memory::{HostOrDeviceSlice, HostSlice};
@@ -37,13 +32,13 @@ pub struct Friproof<T> {
     pub pow_nonce: u64,
 }
 
-impl<F: FieldImpl> Default for Friproof<F> {
+impl<F: Arithmetic+BigNum+Invertible> Default for Friproof<F> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<F: FieldImpl> Friproof<F> {
+impl<F: Arithmetic+BigNum+Invertible> Friproof<F> {
     pub fn new() -> Self {
         Friproof {
             query_proofs: Vec::<Vec<MerkleProof>>::new(),
@@ -58,13 +53,13 @@ pub struct Frilayerdata<T> {
     pub layer_trees: Vec<MerkleTree>,
 }
 
-impl<F: FieldImpl> Default for Frilayerdata<F> {
+impl<F: Arithmetic+BigNum+Invertible> Default for Frilayerdata<F> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<F: FieldImpl> Frilayerdata<F> {
+impl<F: Arithmetic+BigNum+Invertible> Frilayerdata<F> {
     pub fn new() -> Self {
         Frilayerdata {
             layer_code_words: Vec::<Vec<F>>::new(),
@@ -82,8 +77,7 @@ pub struct Current_layer<T> {
 
 impl<F> Default for Current_layer<F>
 where
-    F: FieldImpl + Arithmetic,
-    F::Config: VecOps<F> + NTTDomain<F>,
+    F: Arithmetic + IntegerRing + VecOps<F> + NTTDomain<F>+Invertible,
 {
     fn default() -> Self {
         Self::new()
@@ -92,8 +86,7 @@ where
 
 impl<F> Current_layer<F>
 where
-    F: FieldImpl + Arithmetic,
-    F::Config: VecOps<F> + NTTDomain<F>,
+F: Arithmetic + IntegerRing + VecOps<F> + NTTDomain<F>+Invertible,
 {
     pub fn new() -> Self {
         Current_layer {
@@ -177,7 +170,7 @@ where
     //this is real shit fold
     pub fn fold_evals(&mut self, coset_gen: F, alpha: F) -> Vec<F> {
         let len: usize = self.current_code_word.len();
-        let mut rou: F = get_root_of_unity::<F>(len.try_into().unwrap());
+        let mut rou: F = get_root_of_unity::<F>(len.try_into().unwrap()).unwrap();
         let mut rou_inv = rou.inv();
         let lenu64: u64 = len.try_into().unwrap();
         let gen = F::one();

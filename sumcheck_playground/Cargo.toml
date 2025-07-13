@@ -7,7 +7,7 @@ edition = "2021"
 icicle-core = { workspace = true }
 icicle-runtime = { workspace = true }
 icicle-hash = { workspace = true }
-icicle-bn254 = { git = "https://github.com/ingonyama-zk/icicle.git", tag = "v3.9.2"}
+icicle-bn254 = { git = "https://github.com/ingonyama-zk/icicle.git", tag = "v4.0.0"}
 
 merlin = {version = "3.0.0"}
 

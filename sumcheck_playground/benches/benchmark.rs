@@ -1,8 +1,10 @@
 use criterion::{criterion_group, criterion_main, Criterion};
 use icicle_bn254::curve::ScalarField as Fr;
-use icicle_core::program::{PreDefinedProgram, ReturningValueProgram};
+use icicle_bn254::program::bn254::ReturningValueProgram as P;
+use icicle_core::bignum::BigNum;
+use icicle_core::program::{PreDefinedProgram, ReturningValueProgramImpl};
 use icicle_core::sumcheck::{Sumcheck, SumcheckConfig, SumcheckProofOps, SumcheckTranscriptConfig};
-use icicle_core::traits::{FieldImpl, GenerateRandom};
+use icicle_core::traits::{Arithmetic, GenerateRandom, Invertible};
 use icicle_hash::blake3::Blake3;
 use icicle_runtime::memory::HostSlice;
 use sumcheck_playground::utils::*;
@@ -52,7 +54,7 @@ pub fn bench_sumcheck(c: &mut Criterion) {
             b"round_challenge".to_vec(), 
             true,
             seed_rng);
-            let combine_function = <icicle_bn254::program::bn254::FieldReturningValueProgram as ReturningValueProgram>::new_predefined(PreDefinedProgram::EQtimesABminusC).unwrap();
+            let combine_function = <P as ReturningValueProgramImpl>::new_predefined(PreDefinedProgram::EQtimesABminusC).unwrap();
        let _proof= sumcheck.prove(
         &mle_poly_hosts,
         SAMPLES.try_into().unwrap(),

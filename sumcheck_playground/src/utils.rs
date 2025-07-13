@@ -1,4 +1,4 @@
-use icicle_core::traits::{FieldImpl, GenerateRandom};
+use icicle_core::{bignum::BigNum, traits::{Arithmetic, GenerateRandom, Invertible}};
 use icicle_runtime::{runtime, Device};
 
 pub fn set_backend_cpu() {
@@ -20,9 +20,7 @@ pub fn try_load_and_set_backend_gpu() {
         println!("Using CPU device");
     }
 }
-pub fn generate_random_vector<F: FieldImpl>(size: usize) -> Vec<F>
-where
-    <F as FieldImpl>::Config: GenerateRandom<F>,
+pub fn generate_random_vector<F: Arithmetic+BigNum+Invertible+GenerateRandom>(size: usize) -> Vec<F>
 {
-    F::Config::generate_random(size)
+    F::generate_random(size)
 }

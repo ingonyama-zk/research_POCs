@@ -4,8 +4,7 @@ use fri_poc::utils::{hash_fuse, num_leading_zeros, proof_of_work, try_load_and_s
 use hex::encode;
 use icicle_babybear::field::ScalarField as Fr;
 use icicle_core::{
-    hash::{HashConfig, Hasher},
-    traits::FieldImpl,
+    bignum::BigNum, hash::{HashConfig, Hasher}, traits::{Arithmetic, GenerateRandom, Invertible}
 };
 use icicle_hash::keccak::Keccak256;
 use icicle_runtime::memory::HostSlice;
@@ -15,10 +14,10 @@ use merlin::Transcript;
 
 fn test_fs_merlin_encoding() {
     let mut new_transcript = Transcript::new(b"test");
-    let public = Fr::from_u32(99).to_bytes_le();
+    let public = Fr::from(99u32).to_bytes_le();
     TranscriptProtocol::<Fr>::fri_domain_sep(&mut new_transcript, b"friv1", 2u64, public.clone());
 
-    let t = Fr::from_u32(3);
+    let t = Fr::from(3u32);
     TranscriptProtocol::<Fr>::append_root(&mut new_transcript, b"scalar", &t);
     let challenge = TranscriptProtocol::<Fr>::challenge_scalar(&mut new_transcript, b"challenge");
     println!("transcript challenge from strobe128: {:?}", challenge);

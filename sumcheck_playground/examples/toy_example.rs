@@ -1,7 +1,9 @@
 use icicle_bn254::curve::ScalarField as Fr;
-use icicle_core::program::{PreDefinedProgram, ReturningValueProgram};
+use icicle_core::bignum::BigNum;
+use icicle_core::program::{PreDefinedProgram, ReturningValueProgramImpl};
+use icicle_bn254::program::bn254::ReturningValueProgram as P;
 use icicle_core::sumcheck::{Sumcheck, SumcheckConfig, SumcheckTranscriptConfig};
-use icicle_core::traits::FieldImpl;
+use icicle_core::traits::{Arithmetic, GenerateRandom, Invertible};
 use icicle_hash::blake3::Blake3;
 use icicle_runtime::memory::HostSlice;
 use merlin::Transcript;
@@ -14,44 +16,44 @@ pub fn main() {
 
     //define specific polys
     let poly_a = vec![
-        Fr::from_u32(1),
-        Fr::from_u32(2),
-        Fr::from_u32(3),
-        Fr::from_u32(4),
-        Fr::from_u32(5),
-        Fr::from_u32(6),
-        Fr::from_u32(7),
-        Fr::from_u32(8),
+        Fr::from(1u32),
+        Fr::from(2u32),
+        Fr::from(3u32),
+        Fr::from(4u32),
+        Fr::from(5u32),
+        Fr::from(6u32),
+        Fr::from(7u32),
+        Fr::from(8u32),
     ];
     let poly_b = vec![
-        Fr::from_u32(11),
-        Fr::from_u32(12),
-        Fr::from_u32(13),
-        Fr::from_u32(14),
-        Fr::from_u32(15),
-        Fr::from_u32(16),
-        Fr::from_u32(17),
-        Fr::from_u32(18),
+        Fr::from(11u32),
+        Fr::from(12u32),
+        Fr::from(13u32),
+        Fr::from(14u32),
+        Fr::from(15u32),
+        Fr::from(16u32),
+        Fr::from(17u32),
+        Fr::from(18u32),
     ];
     let poly_c = vec![
-        Fr::from_u32(21),
-        Fr::from_u32(22),
-        Fr::from_u32(23),
-        Fr::from_u32(24),
-        Fr::from_u32(25),
-        Fr::from_u32(26),
-        Fr::from_u32(27),
-        Fr::from_u32(28),
+        Fr::from(21u32),
+        Fr::from(22u32),
+        Fr::from(23u32),
+        Fr::from(24u32),
+        Fr::from(25u32),
+        Fr::from(26u32),
+        Fr::from(27u32),
+        Fr::from(28u32),
     ];
     let poly_e = vec![
-        Fr::from_u32(2),
-        Fr::from_u32(10),
-        Fr::from_u32(1),
-        Fr::from_u32(6),
-        Fr::from_u32(9),
-        Fr::from_u32(3),
-        Fr::from_u32(8),
-        Fr::from_u32(7),
+        Fr::from(2u32),
+        Fr::from(10u32),
+        Fr::from(1u32),
+        Fr::from(6u32),
+        Fr::from(9u32),
+        Fr::from(3u32),
+        Fr::from(8u32),
+        Fr::from(7u32),
     ];
 
     //compute claimed sum
@@ -102,7 +104,7 @@ pub fn main() {
     ];
 
     // define combine function
-    let combine_function = <icicle_bn254::program::bn254::FieldReturningValueProgram as ReturningValueProgram>::new_predefined(PreDefinedProgram::EQtimesABminusC).unwrap();
+    let combine_function = <P as ReturningValueProgramImpl>::new_predefined(PreDefinedProgram::EQtimesABminusC).unwrap();
     let proof = sumcheck.prove(
         &mle_poly_hosts,
         size,
@@ -110,7 +112,7 @@ pub fn main() {
         combine_function,
         &transcript_config,
         &sumcheck_config,
-    );
+    ).unwrap();
     drop(transcript_config);
     drop(prover_previous_transcript);
     drop(poly_a);

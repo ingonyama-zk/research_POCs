@@ -1,8 +1,11 @@
 use icicle_runtime::{runtime, Device};
 
 use icicle_core::{
-    ntt::{get_root_of_unity, initialize_domain, NTTInitDomainConfig}};
-use icicle_bn254::{curve::ScalarField as Fr, polynomials::DensePolynomial as polybn254};
+    ntt::{get_root_of_unity, initialize_domain, NTTInitDomainConfig},
+};
+
+use icicle_bn254::{curve::ScalarField as Fr};
+
 
 pub fn set_backend_cpu() {
     
@@ -27,6 +30,6 @@ pub fn init_ntt_domain(max_ntt_size: u64) {
         "Initializing NTT domain for max size 2^{}",
         max_ntt_size.trailing_zeros()
     );
-    let rou_bn254: Fr = get_root_of_unity(max_ntt_size);
+    let rou_bn254: Fr = get_root_of_unity(max_ntt_size).unwrap();
     initialize_domain(rou_bn254, &NTTInitDomainConfig::default()).unwrap();
 }
